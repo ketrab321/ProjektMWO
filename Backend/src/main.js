@@ -1,7 +1,14 @@
 const express = require('express');
 const bodyParser = require("body-parser");
-const formidable = require('formidable')
+const formidable = require('formidable');
+const storage = require('azure-storage');
+const getStream = require('into-stream');
+const multiparty = require('multiparty');
+const crypto = require('crypto');
 
+const containerName = 'images';
+const blobService = storage.createBlobService('DefaultEndpointsProtocol=https;AccountName=mwo;AccountKey=TEFwo7L1xbtP1CS77SwZl+muwk5cULioDR+MgUdEvN1KBO6Ng9IDwyDQJfEO51R0uz63rczebA2+Su04QXqVCw==;EndpointSuffix=core.windows.net');
+const storageUrl = blobService.getUrl(containerName);
 const port = process.env.PORT || 3000;
 
 const app = express();
@@ -9,6 +16,7 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(express.static('public'));
+
 
 //#######################################
 //######### ITEMS ENDPOINTS #############
@@ -19,11 +27,7 @@ app.post('/items/get-rand-item',(req, res)=>{
         if (err) {
           throw err
         }
-        // console.log('Fields', fields)
-        // console.log('Files', files)
-        // for (const file of Object.entries(files)) {
-        //   console.log(file)
-        // }
+        
         let response = {
             _metadata: {
                 fields: fields,
@@ -89,24 +93,52 @@ app.post('/items/get-user-items',(req, res)=>{
 });
 
 app.post('/items/add',(req, res)=>{
-    new formidable.IncomingForm().parse(req, (err, fields, files) => {
-        if (err) {
-          throw err
+    var form = new multiparty.Form();
+    var files = [], fields = [];
+    var errors = [];
+    var url = '';
+    form.on('part', function(part) {
+        if (part.filename) {
+            files.push(part);
+            var size = part.byteCount;
+            var fileExtension = part.filename.split('.')[1];
+            let hash_generator = crypto.createHash('md5');
+            var name = hash_generator.update(part.filename + Date.now().toString(), 'utf-8').digest('hex') + '.' + fileExtension;
+            console.log(name);
+            url = storageUrl + '/' + name;
+            blobService.createBlockBlobFromStream(containerName, name, part, size, function(error) {
+                if (error) {
+                    errors.push(error);
+                }
+            });
         }
+        
+    });
+    form.on('field', function(name, value) {
+        fields.push({ name: name, value: value})
+    });
+    form.on('error',function(error){
+        errors.push(error);
+    });
+    form.on('close', function() {
         let response = {
             _metadata: {
                 fields: fields,
                 files: files
             },
             success: "true",
-            errors: null,
+            errors: errors,
             data: {
-                itemId: "2"
+                itemId: "2",
+                url: url
             }
         };
         res.send(response);
     });
+    
+    form.parse(req);
 });
+
 
 app.post('/items/delete',(req, res)=>{
     new formidable.IncomingForm().parse(req, (err, fields, files) => {
