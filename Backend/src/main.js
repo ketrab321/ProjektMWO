@@ -5,6 +5,7 @@ const storage = require('azure-storage');
 const getStream = require('into-stream');
 const multiparty = require('multiparty');
 const crypto = require('crypto');
+const queries = require('./queries')
 
 const containerName = 'images';
 const blobService = storage.createBlobService('DefaultEndpointsProtocol=https;AccountName=mwo;AccountKey=TEFwo7L1xbtP1CS77SwZl+muwk5cULioDR+MgUdEvN1KBO6Ng9IDwyDQJfEO51R0uz63rczebA2+Su04QXqVCw==;EndpointSuffix=core.windows.net');
@@ -121,6 +122,8 @@ app.post('/items/add',(req, res)=>{
         errors.push(error);
     });
     form.on('close', function() {
+        fields.push({ name: "photo", value: url})
+        queries.addItem(fields);
         let response = {
             _metadata: {
                 fields: fields,
@@ -205,6 +208,7 @@ app.post('/users/add',(req, res)=>{
         if (err) {
           throw err
         }
+        queries.addUser(fields);
         let response = {
             _metadata: {
                 fields: fields,
