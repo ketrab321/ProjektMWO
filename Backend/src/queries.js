@@ -11,11 +11,25 @@ var config =
 };
 const conn = new mysql.createConnection(config);
 
+conn.connect(
+    function (err) {
+    if (err) {
+        console.log("!!! Cannot connect !!! Error:");
+        throw err;
+    }
+    else
+    {
+       console.log("Connection established.");
+    }
+});
+
+global.conn = conn;
+
 const addItem = (fields) =>
 {
     conn.connect(
-        function (err) { 
-        if (err) { 
+        function (err) {
+        if (err) {
             console.log("!!! Cannot connect !!! Error:");
             throw err;
         }
@@ -39,26 +53,26 @@ const addItem = (fields) =>
                     item['category'] = element.value;
                 }
             });
-            conn.end(function (err) { 
+            conn.end(function (err) {
                 if (err) throw err;
-                else  console.log('Closing connection.') 
+                else  console.log('Closing connection.')
             })
 
-        //     conn.query('INSERT INTO mwo.items (name, quantity) VALUES (?, ?);', ['banana', 150], 
+        //     conn.query('INSERT INTO mwo.items (name, quantity) VALUES (?, ?);', ['banana', 150],
         //     function (err, results, fields) {
         //         if (err) throw err;
         //     else console.log('Inserted ' + results.affectedRows + ' row(s).');
         // })
-        }   
+        }
     });
-    
+
 }
 
 const addUser = (fields) =>
 {
     conn.connect(
-        function (err) { 
-        if (err) { 
+        function (err) {
+        if (err) {
             console.log("!!! Cannot connect !!! Error:");
             throw err;
         }
@@ -67,9 +81,9 @@ const addUser = (fields) =>
             console.log("Connection established!")
            let user = fields
             console.log(user);
-            conn.end(function (err) { 
+            conn.end(function (err) {
                 if (err) throw err;
-                else  console.log('Closing connection.') 
+                else  console.log('Closing connection.')
             })
         }
     })

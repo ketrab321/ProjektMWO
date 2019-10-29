@@ -10,6 +10,12 @@ const queries = require('./queries')
 const containerName = 'images';
 const blobService = storage.createBlobService('DefaultEndpointsProtocol=https;AccountName=mwo;AccountKey=TEFwo7L1xbtP1CS77SwZl+muwk5cULioDR+MgUdEvN1KBO6Ng9IDwyDQJfEO51R0uz63rczebA2+Su04QXqVCw==;EndpointSuffix=core.windows.net');
 const storageUrl = blobService.getUrl(containerName);
+
+const UsersController = require('./users/controller');
+const AuthMiddleware = require('./auth/middleware');
+const AuthController = require('./auth/controller');
+const ItemsController = require('./items/controller');
+
 const port = process.env.PORT || 3000;
 
 const app = express();
@@ -28,7 +34,7 @@ app.post('/items/get-rand-item',(req, res)=>{
         if (err) {
           throw err
         }
-        
+
         let response = {
             _metadata: {
                 fields: fields,
@@ -47,7 +53,7 @@ app.post('/items/get-rand-item',(req, res)=>{
         };
         res.send(response);
     });
-    
+
 });
 
 app.post('/items/get-user-items',(req, res)=>{
@@ -113,7 +119,7 @@ app.post('/items/add',(req, res)=>{
                 }
             });
         }
-        
+
     });
     form.on('field', function(name, value) {
         fields.push({ name: name, value: value})
@@ -138,7 +144,7 @@ app.post('/items/add',(req, res)=>{
         };
         res.send(response);
     });
-    
+
     form.parse(req);
 });
 
@@ -161,41 +167,15 @@ app.post('/items/delete',(req, res)=>{
     });
 });
 
-app.post('/items/set-as-wanted',(req, res)=>{
-    new formidable.IncomingForm().parse(req, (err, fields, files) => {
-        if (err) {
-          throw err
-        }
-        let response = {
-            _metadata: {
-                fields: fields,
-                files: files
-            },
-            success: "true",
-            errors: null,
-            data: null
-        };
-        res.send(response);
-    });
-});
+app.post('/items/set-as-wanted', [
+    AuthMiddleware.isJWTValid,
+    ItemsController.setWanted
+]);
 
-app.post('/items/set-as-unwanted',(req, res)=>{
-    new formidable.IncomingForm().parse(req, (err, fields, files) => {
-        if (err) {
-          throw err
-        }
-        let response = {
-            _metadata: {
-                fields: fields,
-                files: files
-            },
-            success: "true",
-            errors: null,
-            data: null
-        };
-        res.send(response);
-    });
-});
+app.post('/items/set-as-unwanted', [
+    AuthMiddleware.isJWTValid,
+    ItemsController.setUnwanted
+]);
 
 // #######################################
 
@@ -203,26 +183,25 @@ app.post('/items/set-as-unwanted',(req, res)=>{
 //########## USERS ENDPOINTS #############
 //########################################
 
-app.post('/users/add',(req, res)=>{
-    new formidable.IncomingForm().parse(req, (err, fields, files) => {
-        if (err) {
-          throw err
-        }
-        queries.addUser(fields);
-        let response = {
-            _metadata: {
-                fields: fields,
-                files: files
-            },
-            success: "true",
-            errors: null,
-            data: {
-                userToken: "xd"
-            }
-        };
-        res.send(response);
-    });
-});
+app.post('/users/add', [
+    UsersController.insert
+]);
+
+app.post('/users/login', [
+    AuthMiddleware.doPassAndEmailMatch,
+    AuthController.login
+]);
+
+app.post('/users/get', [
+    AuthMiddleware.isJWTValid,
+    UsersController.getById
+]);
+
+app.post('/users/delete', [
+    AuthMiddleware.isJWTValid,
+    AuthMiddleware.isPassCorrect,
+    UsersController.delete
+]);
 
 //###########################################
 
@@ -235,7 +214,7 @@ app.post('/matches/accept-match',(req, res)=>{
         if (err) {
           throw err
         }
-        
+
         let response = {
             _metadata: {
                 fields: fields,
@@ -305,7 +284,7 @@ app.post('/matches/get-pending-matches',(req, res)=>{
                     }
                  },]
                }
-              
+
         };
         res.send(response);
     });
@@ -353,7 +332,7 @@ app.post('/matches/get-accepted-matches',(req, res)=>{
                     }
                  },]
                }
-              
+
         };
         res.send(response);
     });
@@ -362,4 +341,3 @@ app.post('/matches/get-accepted-matches',(req, res)=>{
 app.listen(port,()=>{
     console.log("Server is up on port " + port);
 });
-
