@@ -2,10 +2,30 @@ const express = require('express');
 const bodyParser = require("body-parser");
 const formidable = require('formidable');
 const getStream = require('into-stream');
-const queries = require('./queries')
+const mysql = require('mysql');
 
-
-
+var config =
+{
+    host: 'mwodb.mysql.database.azure.com',
+    user: 'mwodbadmin@mwodb',
+    password: 'mwo123$%^',
+    database: 'mwo',
+    port: 3306,
+    ssl: true
+};
+const conn = new mysql.createConnection(config);
+// conn.connect(
+//     function (err) {
+//     if (err) {
+//         console.log("!!! Cannot connect !!! Error:");
+//         throw err;
+//     }
+//     else
+//     {
+//         console.log("Connection extablished")
+//     }       
+// })
+module.exports.conn = conn;
 const UsersController = require('./users/controller');
 const AuthMiddleware = require('./auth/middleware');
 const AuthController = require('./auth/controller');
@@ -24,74 +44,65 @@ app.use(express.static('public'));
 //######### ITEMS ENDPOINTS #############
 //#######################################
 
-app.post('/items/get-rand-item',(req, res)=>{
-    new formidable.IncomingForm().parse(req, (err, fields, files) => {
-        if (err) {
-          throw err
+app.post('/test',(req, res)=>{
+    let response = {
+        headers: req.headers,
+        url: req.originalUrl,
+        body: req.body,
+    }
+    res.send(response);
+})
+
+app.get('/items/get-rand-item',(req, res)=>{
+    
+    let response = {
+        success: "true",
+        errors: null,
+        data: {
+            itemId: "1",
+            name: "Zbigniew Stonoga",
+            description: "...",
+            photoUrl: "https://www.google.com/url?sa=i&source=images&cd=&ved=2ahUKEwiVuP3QuKHlAhVl7aYKHdZKDbAQjRx6BAgBEAQ&url=https%3A%2F%2Fnoizz.pl%2Fzbigniew-stonoga-niezadowolony-z-wynikow-wyborow-naublizal-polakom-a-potem-przeprosil%2Fxhdj5tf&psig=AOvVaw17fJSy_o4Ax9QzaAg7cyk5&ust=1571338075221027",
+            priceCategory: "100-200",
+            category: "Kategoria"
         }
-
-        let response = {
-            _metadata: {
-                fields: fields,
-                files: files
-            },
-            success: "true",
-            errors: null,
-            data: {
-                itemId: "1",
-                name: "Zbigniew Stonoga",
-                description: "Oni was będą ... jak nikt was jeszcze nie ...",
-                photoUrl: "https://www.google.com/url?sa=i&source=images&cd=&ved=2ahUKEwiVuP3QuKHlAhVl7aYKHdZKDbAQjRx6BAgBEAQ&url=https%3A%2F%2Fnoizz.pl%2Fzbigniew-stonoga-niezadowolony-z-wynikow-wyborow-naublizal-polakom-a-potem-przeprosil%2Fxhdj5tf&psig=AOvVaw17fJSy_o4Ax9QzaAg7cyk5&ust=1571338075221027",
-                priceCategory: "Tanie w ciul",
-                category: "Twoja stara"
-            }
-        };
-        res.send(response);
-    });
-
+    };
+    res.send(response);
 });
 
-app.post('/items/get-user-items',(req, res)=>{
-    new formidable.IncomingForm().parse(req, (err, fields, files) => {
-        if (err) {
-          throw err
-        }
+app.get('/items/get-user-items',(req, res)=>{
         let response = {
-            _metadata: {
-                fields: fields,
-                files: files
-            },
             success: "true",
             errors: null,
             data: [
                 {
                     itemId: "1",
                     name: "Zbigniew Stonoga",
-                    description: "Oni was będą ... jak nikt was jeszcze nie ...",
-                    photoUrl: "https://gfx.wiadomosci.radiozet.pl/var/radiozet-wiadomosci/storage/images/polska/zbigniew-stonoga-w-fatalnym-stanie-w-wiezieniu-pomozcie-mi-ludzie-umieram/485735-1-pol-PL/Zbigniew-Stonoga-w-fatalnym-stanie-w-wiezieniu.-Pomozcie-mi-ludzie-umieram_article.jpg",
-                    priceCategory: "Tanie w ciul",
-                    category: "Twoja stara"
+                    description: "...",
+                    photoUrl: "https://www.google.com/url?sa=i&source=images&cd=&ved=2ahUKEwiVuP3QuKHlAhVl7aYKHdZKDbAQjRx6BAgBEAQ&url=https%3A%2F%2Fnoizz.pl%2Fzbigniew-stonoga-niezadowolony-z-wynikow-wyborow-naublizal-polakom-a-potem-przeprosil%2Fxhdj5tf&psig=AOvVaw17fJSy_o4Ax9QzaAg7cyk5&ust=1571338075221027",
+                    priceCategory: "100-200",
+                    category: "Kategoria"
                 },
                 {
                     itemId: "2",
                     name: "Andrzej Duda",
-                    description: "Dajcie mi tu parasol...",
+                    description: "...",
                     photoUrl: "http://www.paczaj.eu/upload/images/large/2017/07/podajcie_prosze_parasol_andrzej_duda_2017-07-18_18-00-10.jpg",
-                    priceCategory: "Drogie jak skur...",
-                    category: "Twój stary"
+                    priceCategory: "300-500",
+                    category: "Kategoria: Polityka"
                 },
                 {
                     itemId: "3",
                     name: "Chuck Norris",
                     description: "Chuck Norris potrafi trzasnąć obrotowymia drzwiami",
                     photoUrl: "http://dzikabanda.pl/wp-content/uploads/Chuck-04-DB-450x400.jpg",
-                    priceCategory: "MILION TYSIENCÓW",
-                    category: "Category"
+                    priceCategory: "1000000<",
+                    category: "Kategoria: Film"
                 },
             ]
         };
         res.send(response);
-    });
+    
 });
 
 app.post('/items/add',[
@@ -197,16 +208,9 @@ app.post('/matches/decline-match',(req, res)=>{
     });
 });
 
-app.post('/matches/get-pending-matches',(req, res)=>{
-    new formidable.IncomingForm().parse(req, (err, fields, files) => {
-        if (err) {
-          throw err
-        }
+app.get('/matches/get-pending-matches',(req, res)=>{
+    
         let response = {
-            _metadata: {
-                fields: fields,
-                files: files
-            },
             success: "true",
             errors: null,
             data: {
@@ -235,22 +239,14 @@ app.post('/matches/get-pending-matches',(req, res)=>{
                     }
                  },]
                }
-
         };
         res.send(response);
-    });
+
 });
 
-app.post('/matches/get-accepted-matches',(req, res)=>{
-    new formidable.IncomingForm().parse(req, (err, fields, files) => {
-        if (err) {
-          throw err
-        }
+app.get('/matches/get-accepted-matches',(req, res)=>{
+    
         let response = {
-            _metadata: {
-                fields: fields,
-                files: files
-            },
             success: "true",
             errors: null,
             data: {
@@ -286,7 +282,6 @@ app.post('/matches/get-accepted-matches',(req, res)=>{
 
         };
         res.send(response);
-    });
 });
 
 app.listen(port,()=>{

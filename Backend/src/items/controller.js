@@ -1,5 +1,6 @@
 const { check, validationResult } = require('express-validator');
 const itemsCRUD = require('./itemsCRUD');
+const db = require('../main');
 
 exports.add = itemsCRUD.add;
 
@@ -66,23 +67,36 @@ exports.setUnwanted = [
 var helperSetWanted = function (UserId, ItemId, wants) {
     data = { userId: UserId, itemId: ItemId, wanted: wants }
 
-    db.query("INSERT INTO swipes SET ?", data, (err, result) => {
-        if (err) {
-            throw err
-        }
+    // db.conn.connect(
+    //     function (err) {
+    //     if (err) {
+    //         console.log("!!! Cannot connect !!! Error:");
+    //         throw err;
+    //     }
+    //     else
+    //     {
+    //         console.log("Connection extablished")
 
-        if (result.affectedRows > 0) {
-            return res.status(201).send({
-                success: 'true',
-                errors: null,
-                data: null
+            db.conn.query("INSERT INTO swipes SET ?", data, (err, result) => {
+                if (err) {
+                    throw err
+                }
+
+                if (result.affectedRows > 0) {
+                    return res.status(201).send({
+                        success: 'true',
+                        errors: null,
+                        data: null
+                    });
+                } else {
+                    return res.status(500).send({
+                        success: 'false',
+                        errors: [{ message: 'Could not save data' }],
+                        data: null
+                    });
+                }
             });
-        } else {
-            return res.status(500).send({
-                success: 'false',
-                errors: [{ message: 'Could not save data' }],
-                data: null
-            });
-        }
-    });
+            
+    //     }
+    // })
 }

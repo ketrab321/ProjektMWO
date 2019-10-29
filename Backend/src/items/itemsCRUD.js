@@ -2,30 +2,30 @@ const multiparty = require('multiparty');
 const crypto = require('crypto');
 const storage = require('azure-storage');
 const mysql = require('mysql');
-
+const db = require('../main');
 const containerName = 'images';
 const blobService = storage.createBlobService('DefaultEndpointsProtocol=https;AccountName=mwo;AccountKey=TEFwo7L1xbtP1CS77SwZl+muwk5cULioDR+MgUdEvN1KBO6Ng9IDwyDQJfEO51R0uz63rczebA2+Su04QXqVCw==;EndpointSuffix=core.windows.net');
 const storageUrl = blobService.getUrl(containerName);
 
-var localConfig = {
+// // var localConfig = {
 
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'mwo',
-    port: 3306,
-    ssl: true
-}
-var config =
-{
-    host: 'mwodb.mysql.database.azure.com',
-    user: 'mwodbadmin@mwodb',
-    password: 'mwo123$%^',
-    database: 'mwo',
-    port: 3306,
-    ssl: true
-};
-const conn = new mysql.createConnection(localConfig);
+// //     host: 'localhost',
+// //     user: 'root',
+// //     password: '',
+// //     database: 'mwo',
+// //     port: 3306,
+// //     ssl: true
+// // }
+// var config =
+// {
+//     host: 'mwodb.mysql.database.azure.com',
+//     user: 'mwodbadmin@mwodb',
+//     password: 'mwo123$%^',
+//     database: 'mwo',
+//     port: 3306,
+//     ssl: true
+// };
+// const conn = new mysql.createConnection(config);
 
 //ITEMS
 exports.add = (req, res)=>{
@@ -48,7 +48,7 @@ exports.add = (req, res)=>{
     form.on('close', function() {
         fields.push({ name: "photo", value: url});
         fields.push({ name: 'userId', value: req.jwt.userId})
-        addItem(fields);
+        helperAddItem(fields);
         let response = {
             _metadata: {
                 fields: fields,
@@ -83,17 +83,17 @@ var helperHostFile = (file, errors) => {
     return url;
 }
 
-const addItem = (fields) =>
+const helperAddItem = (fields) =>
 {
-    conn.connect(
-        function (err) {
-        if (err) {
-            console.log("!!! Cannot connect !!! Error:");
-            throw err;
-        }
-        else
-        {
-            console.log("Connection extablished")
+    // db.conn.connect(
+    //     function (err) {
+    //     if (err) {
+    //         console.log("!!! Cannot connect !!! Error:");
+    //         throw err;
+    //     }
+    //     else
+    //     {
+    //         console.log("Connection extablished")
            let item = {};
             fields.forEach(element => {
                 if(element.name && element.name === "name"){
@@ -115,20 +115,15 @@ const addItem = (fields) =>
                     item['userId'] = element.value;
                 }
             });
-            conn.query('INSERT INTO mwo.items (itemName, itemDescription, itemPhoto, itemPriceCategory, itemCategory, itemUserId, itemStatus) VALUES (?, ?, ?, ?, ?, ?, ?);', 
+            db.conn.query('INSERT INTO mwo.items (itemName, itemDescription, itemPhoto, itemPriceCategory, itemCategory, itemUserId, itemStatus) VALUES (?, ?, ?, ?, ?, ?, ?);', 
                                         [item['name'], item['description'], item['photo'], item['priceCategory'], item['category'], item['userId'], 'unmatched'],
             function (err, results, fields) {
                 if (err) throw err;
                 else console.log('Inserted ' + results.affectedRows + ' row(s).');
             })
 
-            conn.end(function (err) {
-                if (err) throw err;
-                else  console.log('Closing connection.')
-            })
-
             
-        }
-    });
+    //     }
+    // });
 
 }

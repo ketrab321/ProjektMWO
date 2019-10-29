@@ -1,26 +1,9 @@
 const crypto = require('crypto');
 const mysql = require('mysql');
+const db = require('../main');
 
 const { check, validationResult } = require('express-validator');
-var localConfig = {
 
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'mwo',
-    port: 3306,
-    ssl: true
-}
-var config =
-{
-    host: 'mwodb.mysql.database.azure.com',
-    user: 'mwodbadmin@mwodb',
-    password: 'mwo123$%^',
-    database: 'mwo',
-    port: 3306,
-    ssl: true
-};
-const conn = new mysql.createConnection(localConfig);
 
 exports.insert = [
     check('name').not().isEmpty().trim().escape(),
@@ -42,31 +25,43 @@ exports.insert = [
         req.body.password = salt + "$" + hash;
 
         let data = { userName: req.body.name, userPassword: req.body.password, userEmail: req.body.email, userPhone: req.body.phone }
+        // db.conn.connect(
+        //     function (err) {
+        //     if (err) {
+        //         console.log("!!! Cannot connect !!! Error:");
+        //         throw err;
+        //     }
+        //     else
+        //     {
+        //         console.log("Connection extablished")
 
-        conn.query("INSERT INTO users SET ?", data, (err, result) => {
-            if (err) {
-                return res.status(500).send({
-                    success: 'false',
-                    errors: [err],
-                    data: null
-                });
-            }
+                db.conn.query("INSERT INTO users SET ?", data, (err, result) => {
+                    if (err) {
+                        return res.status(500).send({
+                            success: 'false',
+                            errors: [err],
+                            data: null
+                        });
+                    }
 
-            if (result.affectedRows > 0) {
-                return res.status(201).send({
-                    success: 'true',
-                    errors: null,
-                    data: null
+                    if (result.affectedRows > 0) {
+                        return res.status(201).send({
+                            success: 'true',
+                            errors: null,
+                            data: null
+                        });
+                    } else {
+                        return res.status(500).send({
+                            success: 'false',
+                            errors: [{ message: 'Could not save data' }],
+                            data: null
+                        });
+                    }
                 });
-            } else {
-                return res.status(500).send({
-                    success: 'false',
-                    errors: [{ message: 'Could not save data' }],
-                    data: null
-                });
-            }
-        });
-    }
+               
+            }       
+    //     }
+    // )}
 ];
 
 exports.getById = [
@@ -84,32 +79,45 @@ exports.getById = [
         let query = "SELECT userName, userEmail, userPhone FROM users WHERE ID = '" + req.body.userId + "'";
 
         try {
-            conn.query(query, (err, result) => {
-                if (err) {
-                    return res.status(500).send({
-                        success: 'false',
-                        errors: [err],
-                        data: null
-                    });
-                }
-                if (result.length > 0) {
-                    return res.status(200).send({
-                        success: 'true',
-                        errors: null,
-                        data: {
-                            name: result[0].userName,
-                            email: result[0].userEmail,
-                            phone: result[0].userPhone
+            // db.conn.connect(
+            //     function (err) {
+            //     if (err) {
+            //         console.log("!!! Cannot connect !!! Error:");
+            //         throw err;
+            //     }
+            //     else
+            //     {
+            //         console.log("Connection extablished")
+
+                    db.conn.query(query, (err, result) => {
+                        if (err) {
+                            return res.status(500).send({
+                                success: 'false',
+                                errors: [err],
+                                data: null
+                            });
+                        }
+                        if (result.length > 0) {
+                            return res.status(200).send({
+                                success: 'true',
+                                errors: null,
+                                data: {
+                                    name: result[0].userName,
+                                    email: result[0].userEmail,
+                                    phone: result[0].userPhone
+                                }
+                            });
+                        } else {
+                            return res.status(404).send({
+                                success: 'false',
+                                errors: [{ message: 'No such user here' }],
+                                data: null
+                            });
                         }
                     });
-                } else {
-                    return res.status(404).send({
-                        success: 'false',
-                        errors: [{ message: 'No such user here' }],
-                        data: null
-                    });
-                }
-            });
+
+               // }
+            // })
         } catch (err) {
             res.status(500).send({
                 success: 'false',
@@ -124,29 +132,42 @@ exports.delete = (req, res) => {
     let query = "DELETE FROM users WHERE id = '" + req.jwt.userId + "'";
 
     try {
-        conn.query(query, (err, result) => {
-            if (err) {
-                return res.status(500).send({
-                    success: 'false',
-                    errors: [err],
-                    data: null
-                });
-            }
+        // db.conn.connect(
+        //     function (err) {
+        //     if (err) {
+        //         console.log("!!! Cannot connect !!! Error:");
+        //         throw err;
+        //     }
+        //     else
+        //     {
+        //         console.log("Connection extablished")
 
-            if (result.affectedRows > 0) {
-                return res.status(200).send({
-                    success: 'true',
-                    errors: null,
-                    data: null
+                db.conn.query(query, (err, result) => {
+                    if (err) {
+                        return res.status(500).send({
+                            success: 'false',
+                            errors: [err],
+                            data: null
+                        });
+                    }
+
+                    if (result.affectedRows > 0) {
+                        return res.status(200).send({
+                            success: 'true',
+                            errors: null,
+                            data: null
+                        });
+                    } else {
+                        return res.status(404).send({
+                            success: 'false',
+                            errors: [{ message: 'No such user here' }],
+                            data: null
+                        });
+                    }
                 });
-            } else {
-                return res.status(404).send({
-                    success: 'false',
-                    errors: [{ message: 'No such user here' }],
-                    data: null
-                });
-            }
-        });
+                
+        //     }
+        // })
     } catch (err) {
         res.status(500).send({
             success: 'false',
