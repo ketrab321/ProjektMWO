@@ -17,6 +17,9 @@
     "formidable": "^1.2.1",
     "into-stream": "^5.1.1",
     "multiparty": "^4.2.1",
-    "request": "^2.88.0"
+    "mysql": "^2.17.1",
+    "request": "^2.88.0",
+    "jsonwebtoken": "^8.5.0",
+    "express-validator": "^6.0.0"
   }
 }
