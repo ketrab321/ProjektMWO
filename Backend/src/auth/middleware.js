@@ -6,6 +6,7 @@ const db = require('../main');
 
 
 
+
 exports.doPassAndEmailMatch = [
     check('email').isEmail().normalizeEmail(),
     check('password').not().isEmpty().trim().escape(),

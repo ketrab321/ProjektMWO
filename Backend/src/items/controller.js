@@ -77,9 +77,14 @@ var helperSetWanted = function (UserId, ItemId, wants) {
     //     {
     //         console.log("Connection extablished")
 
+
             db.conn.query("INSERT INTO swipes SET ?", data, (err, result) => {
                 if (err) {
-                    throw err
+                    return res.status(500).send({
+                        success: 'false',
+                        errors: [err],
+                        data: null
+                    });
                 }
 
                 if (result.affectedRows > 0) {
