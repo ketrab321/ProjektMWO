@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const { check, validationResult } = require('express-validator');
 const jwtSecret = require('../../env.js').jwt_secret,
- jwt = require('jsonwebtoken');
+    jwt = require('jsonwebtoken');
 
 exports.doPassAndEmailMatch = [
     check('email').isEmail().normalizeEmail(),

@@ -61,9 +61,13 @@ exports.setUnwanted = [
 var helperSetWanted = function (UserId, ItemId, wants) {
     data = { userId: UserId, itemId: ItemId, wanted: wants }
 
-    db.query("INSERT INTO swipes SET ?", data, (err, result) => {
+    conn.query("INSERT INTO swipes SET ?", data, (err, result) => {
         if (err) {
-            throw err
+            return res.status(500).send({
+                success: 'false',
+                errors: [err],
+                data: null
+            });
         }
 
         if (result.affectedRows > 0) {
