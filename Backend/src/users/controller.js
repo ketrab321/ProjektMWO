@@ -1,5 +1,26 @@
 const crypto = require('crypto');
+const mysql = require('mysql');
+
 const { check, validationResult } = require('express-validator');
+var localConfig = {
+
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'mwo',
+    port: 3306,
+    ssl: true
+}
+var config =
+{
+    host: 'mwodb.mysql.database.azure.com',
+    user: 'mwodbadmin@mwodb',
+    password: 'mwo123$%^',
+    database: 'mwo',
+    port: 3306,
+    ssl: true
+};
+const conn = new mysql.createConnection(localConfig);
 
 exports.insert = [
     check('name').not().isEmpty().trim().escape(),

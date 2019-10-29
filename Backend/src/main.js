@@ -1,15 +1,10 @@
 const express = require('express');
 const bodyParser = require("body-parser");
 const formidable = require('formidable');
-const storage = require('azure-storage');
 const getStream = require('into-stream');
-const multiparty = require('multiparty');
-const crypto = require('crypto');
 const queries = require('./queries')
 
-const containerName = 'images';
-const blobService = storage.createBlobService('DefaultEndpointsProtocol=https;AccountName=mwo;AccountKey=TEFwo7L1xbtP1CS77SwZl+muwk5cULioDR+MgUdEvN1KBO6Ng9IDwyDQJfEO51R0uz63rczebA2+Su04QXqVCw==;EndpointSuffix=core.windows.net');
-const storageUrl = blobService.getUrl(containerName);
+
 
 const UsersController = require('./users/controller');
 const AuthMiddleware = require('./auth/middleware');
@@ -99,54 +94,10 @@ app.post('/items/get-user-items',(req, res)=>{
     });
 });
 
-app.post('/items/add',(req, res)=>{
-    var form = new multiparty.Form();
-    var files = [], fields = [];
-    var errors = [];
-    var url = '';
-    form.on('part', function(part) {
-        if (part.filename) {
-            files.push(part);
-            var size = part.byteCount;
-            var fileExtension = part.filename.split('.')[1];
-            let hash_generator = crypto.createHash('md5');
-            var name = hash_generator.update(part.filename + Date.now().toString(), 'utf-8').digest('hex') + '.' + fileExtension;
-            console.log(name);
-            url = storageUrl + '/' + name;
-            blobService.createBlockBlobFromStream(containerName, name, part, size, function(error) {
-                if (error) {
-                    errors.push(error);
-                }
-            });
-        }
-
-    });
-    form.on('field', function(name, value) {
-        fields.push({ name: name, value: value})
-    });
-    form.on('error',function(error){
-        errors.push(error);
-    });
-    form.on('close', function() {
-        fields.push({ name: "photo", value: url})
-        queries.addItem(fields);
-        let response = {
-            _metadata: {
-                fields: fields,
-                files: files
-            },
-            success: "true",
-            errors: errors,
-            data: {
-                itemId: "2",
-                url: url
-            }
-        };
-        res.send(response);
-    });
-
-    form.parse(req);
-});
+app.post('/items/add',[
+    AuthMiddleware.isJWTValid,
+    ItemsController.add
+]);
 
 
 app.post('/items/delete',(req, res)=>{

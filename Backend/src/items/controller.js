@@ -1,5 +1,10 @@
 const { check, validationResult } = require('express-validator');
+const itemsCRUD = require('./itemsCRUD');
 
+exports.add = itemsCRUD.add;
+
+
+//SWIPES
 exports.setWanted = [
     check('itemId').isNumeric(),
     (req, res) => {
