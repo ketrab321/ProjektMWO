@@ -4,7 +4,8 @@ const db = require('../main');
 
 exports.add = itemsCRUD.add;
 exports.delete = itemsCRUD.delete;
-
+exports.getRandomItem = itemsCRUD.getRandomItem;
+exports.getUserItems = itemsCRUD.getUserItems;
 //SWIPES
 exports.setWanted = [
     check('itemId').isNumeric(),
@@ -17,21 +18,7 @@ exports.setWanted = [
                 data: null
             });
         }
-
-        try {
-            helperSetWanted(req.jwt.userId, req.body.itemId, true);
-            return res.status(201).json({
-                success: 'true',
-                errors: null,
-                data: null
-            });
-        } catch (err) {
-            res.status(500).send({
-                success: 'false',
-                errors: [err],
-                data: null
-            });
-        }
+        helperSetWanted(req.jwt.userId, req.body.itemId, true, res);
     }
 ];
 
@@ -46,25 +33,11 @@ exports.setUnwanted = [
                 data: null
             });
         }
-
-        try {
-            helperSetWanted(req.jwt.userId, req.body.itemId, false);
-            return res.status(201).json({
-                success: 'true',
-                errors: null,
-                data: null
-            });
-        } catch (err) {
-            res.status(500).send({
-                success: 'false',
-                errors: [err],
-                data: null
-            });
-        }
+        helperSetWanted(req.jwt.userId, req.body.itemId, false, res);
     }
 ];
 
-var helperSetWanted = function (UserId, ItemId, wants) {
+var helperSetWanted = function (UserId, ItemId, wants, res) {
     data = { userId: UserId, itemId: ItemId, wanted: wants }
 
     db.conn.query("INSERT INTO swipes SET ?", data, (err, result) => {

@@ -74,6 +74,67 @@ exports.delete = [
         })
     }
 ]
+
+exports.getUserItems = (req, res) => {
+    db.conn.query(`select * from mwo.items where itemUserId = ?`, [req.jwt.userId], function (err, result, fields) {
+        if (err) {
+            return res.status(500).send({
+                success: 'false',
+                errors: [err],
+                data: null
+            });
+        }
+        if (result != undefined && Array.isArray(result)) {
+            
+            return res.status(201).send({
+                success: 'true',
+                errors: null,
+                data: result
+            });
+            
+        } else {
+            return res.status(500).send({
+                success: 'false',
+                errors: [{ message: 'Could not get data' }],
+                data: null
+            });
+        }
+    })
+}
+
+exports.getRandomItem = (req, res)=> {
+    db.conn.query(`select i.id, i.itemName, i.itemDescription, i.itemPhoto, i.itemPriceCategory, i.itemCategory, i.itemUserId, s.userId, s.wanted
+    from mwo.items as i 
+    left join 
+    (select * from mwo.swipes as s where s.userId = ?) as s 
+    on i.id = s.itemId
+    where NOT (s.userId <=> ?)
+    limit 10`, [req.jwt.userId, req.jwt.userId], function (err, result, fields) {
+        if (err) {
+            return res.status(500).send({
+                success: 'false',
+                errors: [err],
+                data: null
+            });
+        }
+        if (result != undefined && Array.isArray(result)) {
+            
+            return res.status(201).send({
+                success: 'true',
+                errors: null,
+                data: shuffle(result)
+            });
+            
+        } else {
+            return res.status(500).send({
+                success: 'false',
+                errors: [{ message: 'Could not get data' }],
+                data: null
+            });
+        }
+    })
+}
+
 //HELPERS
 
 var helperHostFile = (file, errors) => {
@@ -119,4 +180,15 @@ const helperAddItem = (fields) =>
         if (err) throw err;
         else console.log('Inserted ' + results.affectedRows + ' row(s).');
     })
+}
+
+function shuffle(a) {
+    var j, x, i;
+    for (i = a.length - 1; i > 0; i--) {
+        j = Math.floor(Math.random() * (i + 1));
+        x = a[i];
+        a[i] = a[j];
+        a[j] = x;
+    }
+    return a;
 }

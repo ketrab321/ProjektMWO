@@ -53,57 +53,15 @@ app.post('/test',(req, res)=>{
     res.send(response);
 })
 
-app.get('/items/get-rand-item',(req, res)=>{
-    
-    let response = {
-        success: "true",
-        errors: null,
-        data: {
-            itemId: "1",
-            name: "Zbigniew Stonoga",
-            description: "...",
-            photoUrl: "https://www.google.com/url?sa=i&source=images&cd=&ved=2ahUKEwiVuP3QuKHlAhVl7aYKHdZKDbAQjRx6BAgBEAQ&url=https%3A%2F%2Fnoizz.pl%2Fzbigniew-stonoga-niezadowolony-z-wynikow-wyborow-naublizal-polakom-a-potem-przeprosil%2Fxhdj5tf&psig=AOvVaw17fJSy_o4Ax9QzaAg7cyk5&ust=1571338075221027",
-            priceCategory: "100-200",
-            category: "Kategoria"
-        }
-    };
-    res.send(response);
-});
+app.get('/items/get-rand-item',[
+    AuthMiddleware.isJWTValid,
+    ItemsController.getRandomItem
+]);
 
-app.get('/items/get-user-items',(req, res)=>{
-        let response = {
-            success: "true",
-            errors: null,
-            data: [
-                {
-                    itemId: "1",
-                    name: "Zbigniew Stonoga",
-                    description: "...",
-                    photoUrl: "https://www.google.com/url?sa=i&source=images&cd=&ved=2ahUKEwiVuP3QuKHlAhVl7aYKHdZKDbAQjRx6BAgBEAQ&url=https%3A%2F%2Fnoizz.pl%2Fzbigniew-stonoga-niezadowolony-z-wynikow-wyborow-naublizal-polakom-a-potem-przeprosil%2Fxhdj5tf&psig=AOvVaw17fJSy_o4Ax9QzaAg7cyk5&ust=1571338075221027",
-                    priceCategory: "100-200",
-                    category: "Kategoria"
-                },
-                {
-                    itemId: "2",
-                    name: "Andrzej Duda",
-                    description: "...",
-                    photoUrl: "http://www.paczaj.eu/upload/images/large/2017/07/podajcie_prosze_parasol_andrzej_duda_2017-07-18_18-00-10.jpg",
-                    priceCategory: "300-500",
-                    category: "Kategoria: Polityka"
-                },
-                {
-                    itemId: "3",
-                    name: "Chuck Norris",
-                    description: "Chuck Norris potrafi trzasnąć obrotowymia drzwiami",
-                    photoUrl: "http://dzikabanda.pl/wp-content/uploads/Chuck-04-DB-450x400.jpg",
-                    priceCategory: "1000000<",
-                    category: "Kategoria: Film"
-                },
-            ]
-        };
-        res.send(response);
-    
-});
+app.get('/items/get-user-items',[
+    AuthMiddleware.isJWTValid,
+    ItemsController.getUserItems
+]);
 
 app.post('/items/add',[
     AuthMiddleware.isJWTValid,
