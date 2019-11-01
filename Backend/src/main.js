@@ -111,23 +111,11 @@ app.post('/items/add',[
 ]);
 
 
-app.post('/items/delete',(req, res)=>{
-    new formidable.IncomingForm().parse(req, (err, fields, files) => {
-        if (err) {
-          throw err
-        }
-        let response = {
-            _metadata: {
-                fields: fields,
-                files: files
-            },
-            success: "true",
-            errors: null,
-            data: null
-        };
-        res.send(response);
-    });
-});
+app.post('/items/delete',[
+    AuthMiddleware.isJWTValid,
+    ItemsController.delete
+]
+);
 
 app.post('/items/set-as-wanted', [
     AuthMiddleware.isJWTValid,

@@ -3,7 +3,7 @@ const itemsCRUD = require('./itemsCRUD');
 const db = require('../main');
 
 exports.add = itemsCRUD.add;
-
+exports.delete = itemsCRUD.delete;
 
 //SWIPES
 exports.setWanted = [
@@ -67,41 +67,28 @@ exports.setUnwanted = [
 var helperSetWanted = function (UserId, ItemId, wants) {
     data = { userId: UserId, itemId: ItemId, wanted: wants }
 
-    // db.conn.connect(
-    //     function (err) {
-    //     if (err) {
-    //         console.log("!!! Cannot connect !!! Error:");
-    //         throw err;
-    //     }
-    //     else
-    //     {
-    //         console.log("Connection extablished")
-
-
-            db.conn.query("INSERT INTO swipes SET ?", data, (err, result) => {
-                if (err) {
-                    return res.status(500).send({
-                        success: 'false',
-                        errors: [err],
-                        data: null
-                    });
-                }
-
-                if (result.affectedRows > 0) {
-                    return res.status(201).send({
-                        success: 'true',
-                        errors: null,
-                        data: null
-                    });
-                } else {
-                    return res.status(500).send({
-                        success: 'false',
-                        errors: [{ message: 'Could not save data' }],
-                        data: null
-                    });
-                }
+    db.conn.query("INSERT INTO swipes SET ?", data, (err, result) => {
+        if (err) {
+            return res.status(500).send({
+                success: 'false',
+                errors: [err],
+                data: null
             });
-            
-    //     }
-    // })
+        }
+
+        if (result.affectedRows > 0) {
+            return res.status(201).send({
+                success: 'true',
+                errors: null,
+                data: null
+            });
+        } else {
+            return res.status(500).send({
+                success: 'false',
+                errors: [{ message: 'Could not save data' }],
+                data: null
+            });
+        }
+    });
+
 }
