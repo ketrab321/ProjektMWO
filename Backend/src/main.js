@@ -44,14 +44,9 @@ app.use(express.static('public'));
 //######### ITEMS ENDPOINTS #############
 //#######################################
 
-app.post('/test',(req, res)=>{
-    let response = {
-        headers: req.headers,
-        url: req.originalUrl,
-        body: req.body,
-    }
-    res.send(response);
-})
+app.post('/test',[
+    ItemsController.test
+])
 
 app.get('/items/get-rand-item',[
     AuthMiddleware.isJWTValid,

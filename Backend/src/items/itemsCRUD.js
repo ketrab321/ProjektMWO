@@ -8,6 +8,42 @@ const blobService = storage.createBlobService('DefaultEndpointsProtocol=https;Ac
 const storageUrl = blobService.getUrl(containerName);
 
 //ITEMS
+exports.test = (req, res)=>{
+    var form = new multiparty.Form();
+    var files = [], fields = [];
+    var errors = [];
+    var url = '';
+    form.on('part', function(part) {
+        if (part.filename) {
+            files.push(part);
+            url = helperHostFile(part, errors);
+        }
+    });
+    form.on('field', function(name, value) {
+        fields.push({ name: name, value: value})
+    });
+    form.on('error',function(error){
+        errors.push(error);
+    });
+    form.on('close', function() {
+        let response = {
+            _metadata: {
+                fields: fields,
+                files: files
+            },
+            headers: req.headers,
+            url: req.originalUrl,
+            body: req.body,
+            data: {
+                url: url
+            }
+        };
+        res.send(response);
+    });
+
+    form.parse(req);
+}
+
 exports.add = (req, res)=>{
     var form = new multiparty.Form();
     var files = [], fields = [];

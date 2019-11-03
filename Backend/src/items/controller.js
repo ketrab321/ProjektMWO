@@ -6,6 +6,7 @@ exports.add = itemsCRUD.add;
 exports.delete = itemsCRUD.delete;
 exports.getRandomItem = itemsCRUD.getRandomItem;
 exports.getUserItems = itemsCRUD.getUserItems;
+exports.test = itemsCRUD.test;
 //SWIPES
 exports.setWanted = [
     check('itemId').isNumeric(),
