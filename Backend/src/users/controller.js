@@ -25,15 +25,6 @@ exports.insert = [
         req.body.password = salt + "$" + hash;
 
         let data = { userName: req.body.name, userPassword: req.body.password, userEmail: req.body.email, userPhone: req.body.phone }
-        // db.conn.connect(
-        //     function (err) {
-        //     if (err) {
-        //         console.log("!!! Cannot connect !!! Error:");
-        //         throw err;
-        //     }
-        //     else
-        //     {
-        //         console.log("Connection extablished")
 
                 db.conn.query("INSERT INTO users SET ?", data, (err, result) => {
                     if (err) {
@@ -60,8 +51,6 @@ exports.insert = [
                 });
                
             }       
-    //     }
-    // )}
 ];
 
 exports.getById = [
@@ -79,45 +68,32 @@ exports.getById = [
         let query = "SELECT userName, userEmail, userPhone FROM users WHERE ID = '" + req.body.userId + "'";
 
         try {
-            // db.conn.connect(
-            //     function (err) {
-            //     if (err) {
-            //         console.log("!!! Cannot connect !!! Error:");
-            //         throw err;
-            //     }
-            //     else
-            //     {
-            //         console.log("Connection extablished")
-
-                    db.conn.query(query, (err, result) => {
-                        if (err) {
-                            return res.status(500).send({
-                                success: 'false',
-                                errors: [err],
-                                data: null
-                            });
-                        }
-                        if (result.length > 0) {
-                            return res.status(200).send({
-                                success: 'true',
-                                errors: null,
-                                data: {
-                                    name: result[0].userName,
-                                    email: result[0].userEmail,
-                                    phone: result[0].userPhone
-                                }
-                            });
-                        } else {
-                            return res.status(404).send({
-                                success: 'false',
-                                errors: [{ message: 'No such user here' }],
-                                data: null
-                            });
+            db.conn.query(query, (err, result) => {
+                if (err) {
+                    return res.status(500).send({
+                        success: 'false',
+                        errors: [err],
+                        data: null
+                    });
+                }
+                if (result.length > 0) {
+                    return res.status(200).send({
+                        success: 'true',
+                        errors: null,
+                        data: {
+                            name: result[0].userName,
+                            email: result[0].userEmail,
+                            phone: result[0].userPhone
                         }
                     });
-
-               // }
-            // })
+                } else {
+                    return res.status(404).send({
+                        success: 'false',
+                        errors: [{ message: 'No such user here' }],
+                        data: null
+                    });
+                }
+            });
         } catch (err) {
             res.status(500).send({
                 success: 'false',
