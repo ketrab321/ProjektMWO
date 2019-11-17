@@ -2,6 +2,17 @@ const { check, validationResult } = require('express-validator');
 const itemsCRUD = require('./itemsCRUD');
 const db = require('../main');
 
+const customValidationResult = validationResult.withDefaults({
+    formatter: (error) => {
+        return {
+            value: error.value,
+            message: error.msg,
+            param: error.param,
+            location: error.location
+        };
+    }
+});
+
 exports.add = itemsCRUD.add;
 exports.delete = itemsCRUD.delete;
 exports.getRandomItem = itemsCRUD.getRandomItem;
@@ -11,10 +22,10 @@ exports.test = itemsCRUD.test;
 exports.setWanted = [
     check('itemId').isNumeric(),
     (req, res) => {
-        const errors = validationResult(req);
+        const errors = customValidationResult(req);
         if (!errors.isEmpty()) {
             return res.status(422).json({
-                success: 'false',
+                success: false,
                 errors: errors.array(),
                 data: null
             });
@@ -26,10 +37,10 @@ exports.setWanted = [
 exports.setUnwanted = [
     check('itemId').isNumeric(),
     (req, res) => {
-        const errors = validationResult(req);
+        const errors = customValidationResult(req);
         if (!errors.isEmpty()) {
             return res.status(422).json({
-                success: 'false',
+                success: false,
                 errors: errors.array(),
                 data: null
             });
@@ -43,8 +54,9 @@ var helperSetWanted = function (UserId, ItemId, wants, res) {
 
     db.conn.query("INSERT INTO swipes SET ?", data, (err, result) => {
         if (err) {
+            err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
             return res.status(500).send({
-                success: 'false',
+                success: false,
                 errors: [err],
                 data: null
             });
@@ -52,13 +64,13 @@ var helperSetWanted = function (UserId, ItemId, wants, res) {
 
         if (result.affectedRows > 0) {
             return res.status(201).send({
-                success: 'true',
+                success: true,
                 errors: null,
                 data: null
             });
         } else {
             return res.status(500).send({
-                success: 'false',
+                success: false,
                 errors: [{ message: 'Could not save data' }],
                 data: null
             });

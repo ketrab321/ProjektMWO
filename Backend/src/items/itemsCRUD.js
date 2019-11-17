@@ -70,7 +70,7 @@ exports.add = (req, res)=>{
                 fields: fields,
                 files: files
             },
-            success: "true",
+            success: true,
             errors: errors,
             data: {
                 itemId: "2",
@@ -83,26 +83,26 @@ exports.add = (req, res)=>{
     form.parse(req);
 }
 
-exports.delete = [    
+exports.delete = [
     check('itemId').isNumeric(),
     (req, res)=> {
         db.conn.query(`DELETE FROM items WHERE id = ?`, [req.body.itemId], function (err, result, fields) {
             if (err) {
                 return res.status(500).send({
-                    success: 'false',
+                    success: false,
                     errors: [err],
                     data: null
                 });
             }
             if (result.affectedRows > 0) {
                 return res.status(201).send({
-                    success: 'true',
+                    success: true,
                     errors: null,
                     data: null
                 });
             } else {
                 return res.status(500).send({
-                    success: 'false',
+                    success: false,
                     errors: [{ message: 'Could not delete data' }],
                     data: null
                 });
@@ -115,22 +115,22 @@ exports.getUserItems = (req, res) => {
     db.conn.query(`select * from mwo.items where itemUserId = ?`, [req.jwt.userId], function (err, result, fields) {
         if (err) {
             return res.status(500).send({
-                success: 'false',
+                success: false,
                 errors: [err],
                 data: null
             });
         }
         if (result != undefined && Array.isArray(result)) {
-            
+
             return res.status(201).send({
-                success: 'true',
+                success: true,
                 errors: null,
                 data: result
             });
-            
+
         } else {
             return res.status(500).send({
-                success: 'false',
+                success: false,
                 errors: [{ message: 'Could not get data' }],
                 data: null
             });
@@ -140,30 +140,30 @@ exports.getUserItems = (req, res) => {
 
 exports.getRandomItem = (req, res)=> {
     db.conn.query(`select i.id, i.itemName, i.itemDescription, i.itemPhoto, i.itemPriceCategory, i.itemCategory, i.itemUserId, s.userId, s.wanted
-    from mwo.items as i 
-    left join 
-    (select * from mwo.swipes as s where s.userId = ?) as s 
+    from mwo.items as i
+    left join
+    (select * from mwo.swipes as s where s.userId = ?) as s
     on i.id = s.itemId
     where NOT (s.userId <=> ?)
     limit 10`, [req.jwt.userId, req.jwt.userId], function (err, result, fields) {
         if (err) {
             return res.status(500).send({
-                success: 'false',
+                success: false,
                 errors: [err],
                 data: null
             });
         }
         if (result != undefined && Array.isArray(result)) {
-            
+
             return res.status(201).send({
-                success: 'true',
+                success: true,
                 errors: null,
                 data: shuffle(result)
             });
-            
+
         } else {
             return res.status(500).send({
-                success: 'false',
+                success: false,
                 errors: [{ message: 'Could not get data' }],
                 data: null
             });
@@ -210,7 +210,7 @@ const helperAddItem = (fields) =>
             item['userId'] = element.value;
         }
     });
-    db.conn.query('INSERT INTO mwo.items (itemName, itemDescription, itemPhoto, itemPriceCategory, itemCategory, itemUserId, itemStatus) VALUES (?, ?, ?, ?, ?, ?, ?);', 
+    db.conn.query('INSERT INTO mwo.items (itemName, itemDescription, itemPhoto, itemPriceCategory, itemCategory, itemUserId, itemStatus) VALUES (?, ?, ?, ?, ?, ?, ?);',
                                 [item['name'], item['description'], item['photo'], item['priceCategory'], item['category'], item['userId'], 'unmatched'],
     function (err, results, fields) {
         if (err) throw err;
