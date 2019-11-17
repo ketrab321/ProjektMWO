@@ -4,17 +4,26 @@ const jwtSecret = require('../../env.js').jwt_secret;
 const jwt = require('jsonwebtoken');
 const db = require('../main');
 
-
+const customValidationResult = validationResult.withDefaults({
+    formatter: (error) => {
+        return {
+            value: error.value,
+            message: error.msg,
+            param: error.param,
+            location: error.location
+        };
+    }
+});
 
 
 exports.doPassAndEmailMatch = [
     check('email').isEmail().normalizeEmail(),
     check('password').not().isEmpty().trim().escape(),
     (req, res, next) => {
-        const errors = validationResult(req);
+        const errors = customValidationResult(req);
         if (!errors.isEmpty()) {
             return res.status(422).json({
-                success: 'false',
+                success: false,
                 errors: errors.array(),
                 data: null
             });
@@ -22,11 +31,12 @@ exports.doPassAndEmailMatch = [
 
         try {
             let query = "SELECT * FROM users WHERE userEmail = '" + req.body.email + "'";
-            
+
             db.conn.query(query, (err, result) => {
                 if (err) {
+                    err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
                     return res.status(500).send({
-                        success: 'false',
+                        success: false,
                         errors: [err],
                         data: null
                     });
@@ -47,24 +57,24 @@ exports.doPassAndEmailMatch = [
                         return next();
                     } else {
                         return res.status(400).send({
-                            success: 'false',
+                            success: false,
                             errors: [{ message: 'Invalid e-mail or password' }],
                             data: null
                         });
                     }
                 } else {
                     return res.status(404).send({
-                        success: 'false',
+                        success: false,
                         errors: [{ message: 'No such user here' }],
                         data: null
                     });
                 }
             });
 
-            
+
         } catch (err) {
             res.status(500).send({
-                success: 'false',
+                success: false,
                 errors: [err],
                 data: null
             });
@@ -78,7 +88,7 @@ exports.isJWTValid = (req, res, next) => {
             let authorization = req.headers['authorization'].split(' ');
             if (authorization[0] !== 'Bearer') {
                 return res.status(401).send({
-                    success: 'false',
+                    success: false,
                     errors: [{ message: 'Authorization header required' }],
                     data: null
                 });
@@ -97,8 +107,9 @@ exports.isJWTValid = (req, res, next) => {
                         let query = "SELECT id FROM users WHERE id = '" + req.jwt.userId + "'";
                         db.conn.query(query, (err, result) => {
                             if (err) {
+                                err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
                                 return res.status(500).send({
-                                    success: 'false',
+                                    success: false,
                                     errors: [err],
                                     data: null
                                 });
@@ -107,26 +118,26 @@ exports.isJWTValid = (req, res, next) => {
                                 return next();
                             } else {
                                 return res.status(403).send({
-                                    success: 'false',
+                                    success: false,
                                     errors: [{ message: 'Token expired' }],
                                     data: null
                                 });
                             }
                         });
-                        
+
                 //     }
                 // });
             }
         } catch (err) {
             return res.status(403).send({
-                success: 'false',
+                success: false,
                 errors: [{ message: 'Token is invalid' }],
                 data: null
             });
         }
     } else {
         return res.status(401).send({
-            success: 'false',
+            success: false,
             errors: [{ message: 'Authorization header required' }],
             data: null
         });
@@ -136,10 +147,10 @@ exports.isJWTValid = (req, res, next) => {
 exports.isSameUser = [
     check('userId').isNumeric(),
     (req, res, next) => {
-        const errors = validationResult(req);
+        const errors = customValidationResult(req);
         if (!errors.isEmpty()) {
             return res.status(422).json({
-                success: 'false',
+                success: false,
                 errors: errors.array(),
                 data: null
             });
@@ -151,7 +162,7 @@ exports.isSameUser = [
             return next();
         } else {
             return res.status(403).send({
-                success: 'false',
+                success: false,
                 errors: [{ message: 'User is allowed only to perform this action on their own account' }],
                 data: null
             });
@@ -162,10 +173,10 @@ exports.isSameUser = [
 exports.isPassCorrect = [
     check('password').not().isEmpty().trim().escape(),
     (req, res, next) => {
-        const errors = validationResult(req);
+        const errors = customValidationResult(req);
         if (!errors.isEmpty()) {
             return res.status(422).json({
-                success: 'false',
+                success: false,
                 errors: errors.array(),
                 data: null
             });
@@ -187,8 +198,9 @@ exports.isPassCorrect = [
 
                     db.conn.query(query, (err, result) => {
                         if (err) {
+                            err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
                             return res.status(500).send({
-                                success: 'false',
+                                success: false,
                                 errors: [err],
                                 data: null
                             });
@@ -203,25 +215,25 @@ exports.isPassCorrect = [
                                 return next();
                             } else {
                                 return res.status(400).send({
-                                    success: 'false',
+                                    success: false,
                                     errors: [{ message: 'Invalid password' }],
                                     data: null
                                 });
                             }
                         } else {
                             return res.status(404).send({
-                                success: 'false',
+                                success: false,
                                 errors: [{ message: 'No such user here' }],
                                 data: null
                             });
                         }
                     });
-                    
+
             //     }
             // })
         } catch (err) {
             res.status(500).send({
-                success: 'false',
+                success: false,
                 errors: [err],
                 data: null
             });

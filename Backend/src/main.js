@@ -23,7 +23,7 @@ const conn = new mysql.createConnection(config);
 //     else
 //     {
 //         console.log("Connection extablished")
-//     }       
+//     }
 // })
 module.exports.conn = conn;
 const UsersController = require('./users/controller');
@@ -123,7 +123,7 @@ app.post('/matches/accept-match',(req, res)=>{
                 fields: fields,
                 files: files
             },
-            success: "true",
+            success: true,
             errors: null,
             data: null
         };
@@ -141,7 +141,7 @@ app.post('/matches/decline-match',(req, res)=>{
                 fields: fields,
                 files: files
             },
-            success: "true",
+            success: true,
             errors: null,
             data: null
         };
@@ -150,9 +150,9 @@ app.post('/matches/decline-match',(req, res)=>{
 });
 
 app.get('/matches/get-pending-matches',(req, res)=>{
-    
+
         let response = {
-            success: "true",
+            success: true,
             errors: null,
             data: {
                 matches: [
@@ -186,9 +186,9 @@ app.get('/matches/get-pending-matches',(req, res)=>{
 });
 
 app.get('/matches/get-accepted-matches',(req, res)=>{
-    
+
         let response = {
-            success: "true",
+            success: true,
             errors: null,
             data: {
                 matches: [
