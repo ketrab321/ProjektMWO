@@ -30,6 +30,7 @@ const UsersController = require('./users/controller');
 const AuthMiddleware = require('./auth/middleware');
 const AuthController = require('./auth/controller');
 const ItemsController = require('./items/controller');
+const MatchesController = require('./matches/controller');
 
 const port = process.env.PORT || 3000;
 
@@ -131,23 +132,10 @@ app.post('/matches/accept-match',(req, res)=>{
     });
 });
 
-app.post('/matches/decline-match',(req, res)=>{
-    new formidable.IncomingForm().parse(req, (err, fields, files) => {
-        if (err) {
-          throw err
-        }
-        let response = {
-            _metadata: {
-                fields: fields,
-                files: files
-            },
-            success: true,
-            errors: null,
-            data: null
-        };
-        res.send(response);
-    });
-});
+app.post('/matches/decline-match', [
+    AuthMiddleware.isJWTValid,
+    MatchesController.decline
+]);
 
 app.get('/matches/get-pending-matches',(req, res)=>{
 

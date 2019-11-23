@@ -52,7 +52,6 @@ function findMaches(UserId, ItemId) {
 
                     result.forEach(function (row) {
                         var anotherItemItd = row.id
-                        console.log('teraz zajmujemy się przedmiotem ' + anotherItemItd)
 
                         data = { chainStatus: 'PENDING', myItemId: ItemId, userId: ownerId }
                         db.conn.query("INSERT INTO chains SET ?", data, (err, result) => {
@@ -63,7 +62,6 @@ function findMaches(UserId, ItemId) {
                             var Node1
                             if (result.affectedRows > 0) {
                                 Node1 = result.insertId
-                                console.log(ownerId + ' wydaje ' + ItemId + " w węźle " + Node1)
 
                                 data = { chainStatus: 'PENDING', myItemId: anotherItemItd, userId: UserId }
                                 db.conn.query("INSERT INTO chains SET ?", data, (err, result) => {
@@ -74,20 +72,17 @@ function findMaches(UserId, ItemId) {
                                     var Node2
                                     if (result.affectedRows > 0) {
                                         Node2 = result.insertId
-                                        console.log(UserId + ' wydaje ' + anotherItemItd + " w węźle " + Node2)
 
                                         db.conn.query("UPDATE chains SET nextNodeId = ?, prevNodeId = ? WHERE id = ?", [Node2, Node2, Node1], (err, result) => {
                                             if (err) {
                                                 console.log(err)
                                             }
-                                            console.log('z węzła ' + Node1 + " następny i poprzedni to " + Node2)
                                         })
 
                                         db.conn.query("UPDATE chains SET nextNodeId = ?, prevNodeId = ? WHERE id = ?", [Node1, Node1, Node2], (err, result) => {
                                             if (err) {
                                                 console.log(err)
                                             }
-                                            console.log('z węzła ' + Node2 + " następny i poprzedni to " + Node1)
                                         })
                                     }
                                 })
