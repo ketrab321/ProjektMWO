@@ -31,8 +31,76 @@ exports.setWanted = [
             });
         }
         helperSetWanted(req.jwt.userId, req.body.itemId, true, res);
+        findMaches(req.jwt.userId, req.body.itemId)
     }
 ];
+
+function findMaches(UserId, ItemId) {
+    try {
+        data = { id: ItemId }
+        db.conn.query("SELECT itemUserId FROM items WHERE ?", data, (err, result) => {
+            if (err) {
+                console.log(err)
+            }
+
+            if (result.length > 0) {
+                ownerId = result[0].itemUserId
+                db.conn.query("SELECT i.id, i.itemName FROM items i JOIN swipes s ON i.id = s.itemId WHERE i.itemUserId = ? AND s.userId = ?", [UserId, ownerId], (err, result) => {
+                    if (err) {
+                        console.log(err)
+                    }
+
+                    result.forEach(function (row) {
+                        var anotherItemItd = row.id
+                        console.log('teraz zajmujemy się przedmiotem ' + anotherItemItd)
+
+                        data = { chainStatus: 'PENDING', myItemId: ItemId, userId: ownerId }
+                        db.conn.query("INSERT INTO chains SET ?", data, (err, result) => {
+                            if (err) {
+                                console.log(err)
+                            }
+
+                            var Node1
+                            if (result.affectedRows > 0) {
+                                Node1 = result.insertId
+                                console.log(ownerId + ' wydaje ' + ItemId + " w węźle " + Node1)
+
+                                data = { chainStatus: 'PENDING', myItemId: anotherItemItd, userId: UserId }
+                                db.conn.query("INSERT INTO chains SET ?", data, (err, result) => {
+                                    if (err) {
+                                        console.log(err)
+                                    }
+
+                                    var Node2
+                                    if (result.affectedRows > 0) {
+                                        Node2 = result.insertId
+                                        console.log(UserId + ' wydaje ' + anotherItemItd + " w węźle " + Node2)
+
+                                        db.conn.query("UPDATE chains SET nextNodeId = ?, prevNodeId = ? WHERE id = ?", [Node2, Node2, Node1], (err, result) => {
+                                            if (err) {
+                                                console.log(err)
+                                            }
+                                            console.log('z węzła ' + Node1 + " następny i poprzedni to " + Node2)
+                                        })
+
+                                        db.conn.query("UPDATE chains SET nextNodeId = ?, prevNodeId = ? WHERE id = ?", [Node1, Node1, Node2], (err, result) => {
+                                            if (err) {
+                                                console.log(err)
+                                            }
+                                            console.log('z węzła ' + Node2 + " następny i poprzedni to " + Node1)
+                                        })
+                                    }
+                                })
+                            }
+                        })
+                    })
+                });
+            }
+        });
+    } catch (err) {
+        console.log(err)
+    }
+}
 
 exports.setUnwanted = [
     check('itemId').isNumeric(),
@@ -50,9 +118,8 @@ exports.setUnwanted = [
 ];
 
 var helperSetWanted = function (UserId, ItemId, wants, res) {
-    data = { userId: UserId, itemId: ItemId, wanted: wants }
-
-    db.conn.query("INSERT INTO swipes SET ?", data, (err, result) => {
+    data = { id: ItemId }
+    db.conn.query("SELECT itemUserId FROM items WHERE ?", data, (err, result) => {
         if (err) {
             err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
             return res.status(500).send({
@@ -62,19 +129,73 @@ var helperSetWanted = function (UserId, ItemId, wants, res) {
             });
         }
 
-        if (result.affectedRows > 0) {
-            return res.status(201).send({
-                success: true,
-                errors: null,
-                data: null
-            });
-        } else {
-            return res.status(500).send({
+        if (result.length == 0) {
+            return res.status(404).send({
                 success: false,
-                errors: [{ message: 'Could not save data' }],
+                errors: [{ message: 'Item does not exist.' }],
                 data: null
             });
         }
-    });
 
+        ownerId = result[0].itemUserId
+        if (UserId == ownerId) {
+            return res.status(422).send({
+                success: false,
+                errors: [{ message: 'User cannot perform this action on their item.' }],
+                data: null
+            });
+        } else {
+            db.conn.query("SELECT id FROM swipes WHERE userId = ? AND itemId = ?", [UserId, ItemId], (err, result) => {
+                if (err) {
+                    err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
+                    return res.status(500).send({
+                        success: false,
+                        errors: [err],
+                        data: null
+                    });
+                }
+
+                if (result.length == 0) {
+                    data = { userId: UserId, itemId: ItemId, wanted: wants }
+
+                    db.conn.query("INSERT INTO swipes SET ?", data, (err, result) => {
+                        if (err) {
+                            err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
+                            var resp_code;
+                            if (err.code === 'ER_NO_REFERENCED_ROW') {
+                                resp_code = 404;
+                            } else {
+                                resp_code = 500;
+                            }
+                            return res.status(resp_code).send({
+                                success: false,
+                                errors: [err],
+                                data: null
+                            });
+                        }
+
+                        if (result.affectedRows > 0) {
+                            return res.status(201).send({
+                                success: true,
+                                errors: null,
+                                data: null
+                            });
+                        } else {
+                            return res.status(500).send({
+                                success: false,
+                                errors: [{ message: 'Could not save data' }],
+                                data: null
+                            });
+                        }
+                    });
+                } else {
+                    return res.status(422).send({
+                        success: false,
+                        errors: [{ message: 'User cannot perform this action multiple times on same item.' }],
+                        data: null
+                    });
+                }
+            })
+        }
+    });
 }
