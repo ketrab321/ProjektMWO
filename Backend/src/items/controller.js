@@ -30,71 +30,78 @@ exports.setWanted = [
                 data: null
             });
         }
-        helperSetWanted(req.jwt.userId, req.body.itemId, true, res);
-        findMaches(req.jwt.userId, req.body.itemId)
+        helperSetWanted(req.jwt.userId, req.body.itemId, true, res, findMaches);
     }
 ];
 
 function findMaches(UserId, ItemId) {
     try {
-        data = { id: ItemId }
-        db.conn.query("SELECT itemUserId FROM items WHERE ?", data, (err, result) => {
-            if (err) {
-                console.log(err)
-            }
+        db.conn.query("SELECT itemUserId FROM items WHERE ?", { id: ItemId }, findOwner)
+    } catch (err) {
+        console.log(err)
+    }
 
-            if (result.length > 0) {
-                ownerId = result[0].itemUserId
-                db.conn.query("SELECT i.id, i.itemName FROM items i JOIN swipes s ON i.id = s.itemId WHERE i.itemUserId = ? AND s.userId = ?", [UserId, ownerId], (err, result) => {
+    function findOwner(err, result) {
+        if (err) {
+            console.log(err)
+        }
+
+        if (result.length > 0) {
+            ownerId = result[0].itemUserId
+            db.conn.query("SELECT i.id FROM items i JOIN swipes s ON i.id = s.itemId WHERE s.wanted = 1 AND i.itemUserId = ? AND s.userId = ?", [UserId, ownerId], findItemsForExchange)
+            function findItemsForExchange(err, result) {
+                if (err) {
+                    console.log(err)
+                }
+
+                result.forEach(handleItem)
+            };
+
+            function handleItem(row) {
+                var anotherItemItd = row.id
+
+                data = { chainStatus: 'PENDING', myItemId: ItemId, userId: ownerId }
+                db.conn.query("INSERT INTO chains SET ?", data, addFirstNode)
+                function addFirstNode(err, result) {
                     if (err) {
                         console.log(err)
                     }
 
-                    result.forEach(function (row) {
-                        var anotherItemItd = row.id
+                    var Node1
 
-                        data = { chainStatus: 'PENDING', myItemId: ItemId, userId: ownerId }
-                        db.conn.query("INSERT INTO chains SET ?", data, (err, result) => {
-                            if (err) {
-                                console.log(err)
-                            }
+                    if (result.affectedRows > 0) {
+                        Node1 = result.insertId
 
-                            var Node1
-                            if (result.affectedRows > 0) {
-                                Node1 = result.insertId
+                        data = { chainStatus: 'PENDING', myItemId: anotherItemItd, userId: UserId }
+                        db.conn.query("INSERT INTO chains SET ?", data, updatePointers)
+                    }
 
-                                data = { chainStatus: 'PENDING', myItemId: anotherItemItd, userId: UserId }
-                                db.conn.query("INSERT INTO chains SET ?", data, (err, result) => {
-                                    if (err) {
-                                        console.log(err)
-                                    }
+                    function updatePointers(err, result) {
+                        if (err) {
+                            console.log(err)
+                        }
 
-                                    var Node2
-                                    if (result.affectedRows > 0) {
-                                        Node2 = result.insertId
+                        var Node2
+                        if (result.affectedRows > 0) {
+                            Node2 = result.insertId
 
-                                        db.conn.query("UPDATE chains SET nextNodeId = ?, prevNodeId = ? WHERE id = ?", [Node2, Node2, Node1], (err, result) => {
-                                            if (err) {
-                                                console.log(err)
-                                            }
-                                        })
+                            db.conn.query("UPDATE chains SET nextNodeId = ?, prevNodeId = ? WHERE id = ?", [Node2, Node2, Node1], (err, result) => {
+                                if (err) {
+                                    console.log(err)
+                                }
+                            })
 
-                                        db.conn.query("UPDATE chains SET nextNodeId = ?, prevNodeId = ? WHERE id = ?", [Node1, Node1, Node2], (err, result) => {
-                                            if (err) {
-                                                console.log(err)
-                                            }
-                                        })
-                                    }
-                                })
-                            }
-                        })
-                    })
-                });
+                            db.conn.query("UPDATE chains SET nextNodeId = ?, prevNodeId = ? WHERE id = ?", [Node1, Node1, Node2], (err, result) => {
+                                if (err) {
+                                    console.log(err)
+                                }
+                            })
+                        }
+                    }
+                }
             }
-        });
-    } catch (err) {
-        console.log(err)
-    }
+        }
+    };
 }
 
 exports.setUnwanted = [
@@ -108,13 +115,14 @@ exports.setUnwanted = [
                 data: null
             });
         }
-        helperSetWanted(req.jwt.userId, req.body.itemId, false, res);
+        helperSetWanted(req.jwt.userId, req.body.itemId, false, res, () => { });
     }
 ];
 
-var helperSetWanted = function (UserId, ItemId, wants, res) {
+var helperSetWanted = function (UserId, ItemId, wants, res, callback) {
     data = { id: ItemId }
-    db.conn.query("SELECT itemUserId FROM items WHERE ?", data, (err, result) => {
+    db.conn.query("SELECT itemUserId FROM items WHERE ?", data, checkIfLegal)
+    function checkIfLegal(err, result) {
         if (err) {
             err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
             return res.status(500).send({
@@ -140,7 +148,8 @@ var helperSetWanted = function (UserId, ItemId, wants, res) {
                 data: null
             });
         } else {
-            db.conn.query("SELECT id FROM swipes WHERE userId = ? AND itemId = ?", [UserId, ItemId], (err, result) => {
+            db.conn.query("SELECT id FROM swipes WHERE userId = ? AND itemId = ?", [UserId, ItemId], checkForDuplicateAction)
+            function checkForDuplicateAction(err, result) {
                 if (err) {
                     err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
                     return res.status(500).send({
@@ -153,7 +162,8 @@ var helperSetWanted = function (UserId, ItemId, wants, res) {
                 if (result.length == 0) {
                     data = { userId: UserId, itemId: ItemId, wanted: wants }
 
-                    db.conn.query("INSERT INTO swipes SET ?", data, (err, result) => {
+                    db.conn.query("INSERT INTO swipes SET ?", data, insertSwipe)
+                    function insertSwipe(err, result) {
                         if (err) {
                             err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
                             var resp_code;
@@ -170,6 +180,7 @@ var helperSetWanted = function (UserId, ItemId, wants, res) {
                         }
 
                         if (result.affectedRows > 0) {
+                            callback(UserId, ItemId)
                             return res.status(201).send({
                                 success: true,
                                 errors: null,
@@ -182,7 +193,7 @@ var helperSetWanted = function (UserId, ItemId, wants, res) {
                                 data: null
                             });
                         }
-                    });
+                    };
                 } else {
                     return res.status(422).send({
                         success: false,
@@ -190,7 +201,7 @@ var helperSetWanted = function (UserId, ItemId, wants, res) {
                         data: null
                     });
                 }
-            })
+            }
         }
-    });
+    };
 }
