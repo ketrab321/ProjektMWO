@@ -128,45 +128,10 @@ app.get('/matches/get-pending-matches', [
     MatchesController.get_pending
 ]);
 
-app.get('/matches/get-accepted-matches',(req, res)=>{
-
-        let response = {
-            success: true,
-            errors: null,
-            data: {
-                matches: [
-                {
-                    id: 2,
-                    myItem: {
-                        name: "Ciasto",
-                        description: "smaczne",
-                        photoUrl: "https://www.mojewypieki.com/img/images/original/Ciasto_kinder_pingui_5_2411.jpg",
-                        priceCategory: "Ło ho ho miljony",
-                        category: "Jedzonko"
-                    },
-                    exchangeItem: {
-                        name: "Buty",
-                        description: "ładne",
-                        photoUrl: "https://st.depositphotos.com/1016026/4819/i/950/depositphotos_48194997-stock-photo-high-heel-shoes-and-bikini.jpg",
-                        priceCategory: "No drogie",
-                        category: "Ubranko"
-                    },
-                    toWho: {
-                        name: "macho6969",
-                        email: "macho6969@wp.pl",
-                        phone: "112 112 112"
-                    },
-                    fromWho: {
-                        name: "cichoń1000",
-                        email: "jacek.cichon@pwr.edu.pl",
-                        phone: "71 320 2109"
-                    }
-                 },]
-               }
-
-        };
-        res.send(response);
-});
+app.get('/matches/get-accepted-matches', [
+    AuthMiddleware.isJWTValid,
+    MatchesController.get_accepted
+]);
 
 app.listen(port,()=>{
     console.log("Server is up on port " + port);
