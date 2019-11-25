@@ -144,8 +144,8 @@ exports.getRandomItem = (req, res)=> {
     left join
     (select * from mwo.swipes as s where s.userId = ?) as s
     on i.id = s.itemId
-    where NOT (s.userId <=> ?)
-    limit 10`, [req.jwt.userId, req.jwt.userId], function (err, result, fields) {
+    where NOT (s.userId <=> ?) AND itemUserId <> ?
+    limit 100`, [req.jwt.userId, req.jwt.userId, req.jwt.userId], function (err, result, fields) {
         if (err) {
             return res.status(500).send({
                 success: false,
@@ -154,11 +154,14 @@ exports.getRandomItem = (req, res)=> {
             });
         }
         if (result != undefined && Array.isArray(result)) {
-
+            let data = shuffle(result);
+            let length = (10 < data.length)? 10 : data.length;
+            length = (0 < length)? length - 1: 0;
+            let data = data.slice(0, length);
             return res.status(201).send({
                 success: true,
                 errors: null,
-                data: shuffle(result)
+                data: data
             });
 
         } else {
