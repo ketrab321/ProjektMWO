@@ -6,10 +6,10 @@ const mysql = require('mysql');
 
 var config =
 {
-    host: 'remotemysql.com',
-    user: 'KmS1o79Qxb',
-    password: 'Cdlu7NUxxy',
-    database: 'KmS1o79Qxb',
+    host: 'mwodb.mysql.database.azure.com',
+    user: 'mwodbadmin@mwodb',
+    password: 'mwo123$%^',
+    database: 'mwo',
     port: 3306,
     ssl: true
 };
