@@ -157,7 +157,7 @@ exports.getRandomItem = (req, res)=> {
             let data = shuffle(result);
             let length = (10 < data.length)? 10 : data.length;
             length = (0 < length)? length - 1: 0;
-            let data = data.slice(0, length);
+            data = data.slice(0, length);
             return res.status(201).send({
                 success: true,
                 errors: null,
