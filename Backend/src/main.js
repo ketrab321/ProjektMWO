@@ -45,27 +45,27 @@ app.use(express.static('public'));
 //######### ITEMS ENDPOINTS #############
 //#######################################
 
-app.post('/test',[
+app.post('/test', [
     ItemsController.test
 ])
 
-app.get('/items/get-rand-item',[
+app.get('/items/get-rand-item', [
     AuthMiddleware.isJWTValid,
     ItemsController.getRandomItem
 ]);
 
-app.get('/items/get-user-items',[
+app.get('/items/get-user-items', [
     AuthMiddleware.isJWTValid,
     ItemsController.getUserItems
 ]);
 
-app.post('/items/add',[
+app.post('/items/add', [
     AuthMiddleware.isJWTValid,
     ItemsController.add
 ]);
 
 
-app.post('/items/delete',[
+app.post('/items/delete', [
     AuthMiddleware.isJWTValid,
     ItemsController.delete
 ]
@@ -96,15 +96,21 @@ app.post('/users/login', [
     AuthController.login
 ]);
 
-app.post('/users/get', [
+app.get('/users/myself', [
     AuthMiddleware.isJWTValid,
-    UsersController.getById
+    UsersController.get_myself
 ]);
 
 app.post('/users/delete', [
     AuthMiddleware.isJWTValid,
     AuthMiddleware.isPassCorrect,
     UsersController.delete
+]);
+
+app.put('/users/update', [
+    AuthMiddleware.isJWTValid,
+    AuthMiddleware.isPassCorrect,
+    UsersController.update
 ]);
 
 //###########################################
@@ -133,6 +139,23 @@ app.get('/matches/get-accepted-matches', [
     MatchesController.get_accepted
 ]);
 
-app.listen(port,()=>{
+//###########################################
+
+//#########################################
+//########### OTHER ENDPOINTS ###########
+//#########################################
+
+app.get('/auth/istokenvalid', [
+    AuthMiddleware.isJWTValid,
+    (_req, res) => {
+        return res.status(200).send({
+            success: true,
+            errors: null,
+            data: null
+        });
+    }
+]);
+
+app.listen(port, () => {
     console.log("Server is up on port " + port);
 });
