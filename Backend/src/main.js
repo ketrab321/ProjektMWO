@@ -129,6 +129,11 @@ app.post('/matches/decline-match', [
     MatchesController.decline
 ]);
 
+app.post('/matches/confirm-match', [
+    AuthMiddleware.isJWTValid,
+    MatchesController.confirm
+]);
+
 app.get('/matches/get-pending-matches', [
     AuthMiddleware.isJWTValid,
     MatchesController.get_pending
