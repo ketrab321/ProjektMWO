@@ -58,6 +58,7 @@ var AlgorithmManager = /** @class */ (function () {
                     f = temp.circuit.length - 1;
                     this.myStack.pop();
                     this.unblock(v);
+                    // if(circuitCount<10)
                     this.circuitFound(temp.circuit);
                     return f;
                 }
@@ -103,9 +104,79 @@ var AlgorithmManager = /** @class */ (function () {
         }
     };
     AlgorithmManager.prototype.circuitFound = function (circuit) {
+        var user_dbId = new Map();
         circuitCount++;
         endges += circuit.length;
-        console.log("Circuit: ", circuit);
+        db.conn.beginTransaction(function (err) {
+            if (err) {
+                console.log(err);
+                db.conn.rollback(function () {
+                    console.log(err);
+                });
+            }
+            else {
+                var queryPromises = [];
+                var _loop_1 = function (i) {
+                    var edge = circuit[i];
+                    var queryPromise = new Promise(function (resolve, reject) {
+                        db.conn.query('INSERT INTO mwo.chains (userId, myItemId, chainStatus) VALUES (?, ?, ?)', [edge.to, edge.toItem, "PENDING"], function (error, res) {
+                            if (error) {
+                                console.log(error);
+                                db.conn.rollback(function () {
+                                    console.log(err);
+                                });
+                            }
+                            else if (res) {
+                                user_dbId.set(edge.to, res.insertId);
+                                return resolve();
+                            }
+                        });
+                    });
+                    queryPromises.push(queryPromise);
+                };
+                for (var i = 0; i < circuit.length; i++) {
+                    _loop_1(i);
+                }
+                Promise.all(queryPromises).then(function () {
+                    var updatePromises = [];
+                    var users = Array.from(user_dbId.keys());
+                    var max = users.length - 1;
+                    var _loop_2 = function (k) {
+                        var prevIndex = (k - 1 >= 0) ? k - 1 : max;
+                        var nextIndex = (k + 1) % (max + 1);
+                        //console.log("k= ",k," prev = ", prevIndex, " next = ", nextIndex, " users[k] = ", users[k], " users[prev] = ", users[prevIndex]," users[next] = ", users[nextIndex], " id users[prev] = ", user_dbId.get(users[prevIndex]), " id users[next] = ", user_dbId.get(users[nextIndex])," id users[k] = ", user_dbId.get(users[k]));
+                        updatePromises.push(new Promise(function (resolve, reject) {
+                            db.conn.query('UPDATE mwo.chains SET prevNodeId = ?, nextNodeId = ? WHERE id = ?', [user_dbId.get(users[prevIndex]), user_dbId.get(users[nextIndex]), user_dbId.get(users[k])], function (err, res) {
+                                if (err) {
+                                    console.log(err);
+                                    db.conn.rollback(function () {
+                                    });
+                                }
+                                else
+                                    return resolve(res);
+                            });
+                        }));
+                    };
+                    for (var k = 0; k < users.length; k++) {
+                        _loop_2(k);
+                    }
+                    return updatePromises;
+                }).then(function (promisesArray) {
+                    return Promise.all(promisesArray);
+                }).then(function (response) {
+                });
+            }
+            db.conn.commit(function (err) {
+                if (err) {
+                    console.log(err);
+                    db.conn.rollback(function () {
+                        console.log(err);
+                    });
+                }
+                else {
+                }
+            });
+        });
     };
     AlgorithmManager.prototype.unblock = function (u) {
         var _this = this;
@@ -122,12 +193,11 @@ var AlgorithmManager = /** @class */ (function () {
     };
     return AlgorithmManager;
 }());
-function startAlgortihm() {
+function startAlgorithm() {
     var algorithmManager = new AlgorithmManager();
     var graph = new Map();
     var circuitLength = 4;
     db.conn.query("SELECT s.id, s.userId, i.itemUserId, s.itemId FROM mwo.swipes AS s JOIN mwo.items AS i ON s.itemId = i.id WHERE s.wanted = 1", [], function (err, result) {
-        //console.log("Result: ", result, " err: ", err);
         var startVerticle = 1;
         if (result && Array.isArray(result) && !err) {
             startVerticle = result[Math.floor(result.length / 2)].userId;
@@ -141,53 +211,18 @@ function startAlgortihm() {
                 });
                 graph.set(swipe.userId, temp);
             });
-            //console.log(graph)
             algorithmManager.loadGraph(graph);
-            startVerticle = result[Math.floor(result.length / 2)].userId;
-            algorithmManager.startAlgorithm(startVerticle, circuitLength);
             startVerticle = result[result.length - 1].userId;
             algorithmManager.startAlgorithm(startVerticle, circuitLength);
             startVerticle = result[0].userId;
             algorithmManager.startAlgorithm(startVerticle, circuitLength);
-            startVerticle = result[Math.floor(result.length / 3)].userId;
+            startVerticle = result[Math.floor(Math.random() * (result.length - 1))].userId;
             algorithmManager.startAlgorithm(startVerticle, circuitLength);
-            startVerticle = result[Math.floor(2 * result.length / 3)].userId;
+            startVerticle = result[Math.floor(Math.random() * (result.length - 1))].userId;
             algorithmManager.startAlgorithm(startVerticle, circuitLength);
-            console.log("Edges: ");
-            console.log(result.length);
-            console.log("Circuit count: ");
-            console.log(circuitCount);
-            console.log("Covered Edges: ");
-            console.log(endges);
+            startVerticle = result[Math.floor(Math.random() * (result.length - 1))].userId;
+            algorithmManager.startAlgorithm(startVerticle, circuitLength);
         }
     });
-    // algorithmManager.loadGraph(generateDummyData(10000, 7500));
-    // algorithmManager.startAlgorithm(1, 6);
 }
-exports.startAlgortihm = startAlgortihm;
-function dummyData() {
-    var dummyData = new Map();
-    // dummyData.set(1, [{ id: "12", to: 2, from: 1 }, { id: "18", to: 8, from: 1}, { id: "17", to: 7, from: 1}])
-    // dummyData.set(2, [{ id: "23", to: 3, from: 2 }, { id: "24", to: 4, from: 2 }, { id: "25", to: 5, from: 2 }])
-    // dummyData.set(3, [{ id: "36", to: 6, from: 3 }])
-    // dummyData.set(4, [{ id: "46", to: 6, from: 4 }])
-    // dummyData.set(5, [{ id: "56", to: 6, from: 5 }])
-    // dummyData.set(6, [{ id: "67", to: 7, from: 6 }, { id: "64", to: 4, from: 6 }, { id: "65", to: 5, from: 6 }])
-    // dummyData.set(7, [{ id: "73", to: 3, from: 7 }, { id: "78", to: 8, from: 7}])
-    return dummyData;
-}
-function generateDummyData(n, edgesPerVerticle) {
-    var dummyData = new Map();
-    for (var i = 1; i <= n; i++) {
-        var array = [];
-        var temp = i;
-        for (var j = 1; j < edgesPerVerticle; j++) {
-            var randNumber = Math.floor(Math.random() * n); //(temp + j) % n + 1;
-            array.push({ id: "" + randNumber + i, to: randNumber, from: i });
-        }
-        dummyData.set(i, array);
-    }
-    //console.log(dummyData)
-    return dummyData;
-}
-startAlgortihm();
+exports.startAlgorithm = startAlgorithm;
