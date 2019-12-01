@@ -17,7 +17,8 @@ enum State {
 class AlgorithmManager{
     public myStack: Array<Edge>;
     public adjacencyStructure: Map<number, Array<Edge>>;
-    public blocked: Map<number, boolean>;
+    public blockedVerticle: Map<number, boolean>;
+    public blockedItem: Map<number, boolean>;
     public b: Map<number, Array<number>>;
     public taken: Map<number, State>;
     public edgeTaken: Map<number, boolean>;
@@ -26,7 +27,7 @@ class AlgorithmManager{
         this.myStack = new Array<Edge>(); 
         this.adjacencyStructure = new Map<number, Array<Edge>>();
         this.b = new Map<number, Array<number>>();
-        this.blocked = new Map<number, boolean>();
+        this.blockedVerticle = new Map<number, boolean>();
     }
 
     public unstackFrom(index: number, stack: Array<Edge>){
@@ -43,13 +44,15 @@ class AlgorithmManager{
         this.adjacencyStructure = newGraph;
         this.taken = new Map<number, State>();
         this.edgeTaken = new Map<number, boolean>();
+        this.blockedItem = new Map<number, boolean>();
+
     }
 
     public startAlgorithm(startVerticle: number, circuitLength: number){
 
         this.myStack = new Array<Edge>();
         this.b = new Map<number, Array<number>>();
-        this.blocked = new Map<number, boolean>();
+        this.blockedVerticle = new Map<number, boolean>();
         
         this.circuit(startVerticle, circuitLength);
     }
@@ -61,7 +64,7 @@ class AlgorithmManager{
         {
             return f;
         }
-        this.blocked.set(v, true);
+        this.blockedVerticle.set(v, true);
 
         for(let i = 0; i < Av.length; i++)
         {
@@ -81,8 +84,8 @@ class AlgorithmManager{
                     
                     return f;
                 }
-                if(!this.blocked.get(edge.to)){
-                f = this.circuit(edge.to, circuitLength)
+                if(!this.blockedVerticle.get(edge.to) && !this.blockedItem.get(edge.toItem)){
+                    f = this.circuit(edge.to, circuitLength)
                     if(f > 0)
                     {
                         f--;
@@ -134,64 +137,14 @@ class AlgorithmManager{
         let user_dbId = new Map<number, number>();
         circuitCount++;
         endges+=circuit.length;
-        db.conn.beginTransaction(function(err) {
-            if(err){
-                console.log(err);
-
-                db.conn.rollback(function(){
-                    console.log(err);
-                })
-            }
-            else
-            {
-                let queryPromises = [];
-                for(let i = 0; i < circuit.length; i++)
-                {
-                    let edge = circuit[i];
-                    let queryPromise = new Promise((resolve ,reject)=>{
-                        db.conn.query('INSERT INTO mwo.chains (userId, myItemId, chainStatus) VALUES (?, ?, ?)', [edge.to, edge.toItem, "PENDING"], function(error, res){
-                            if(error){
-                                console.log(error);
-
-                                db.conn.rollback(function(){
-                                    console.log(err);
-                                })
-                            }
-                            else if(res){
-                                user_dbId.set(edge.to, res.insertId);
-                                return resolve();
-                            }
-                        })
-                    });
-                    queryPromises.push(queryPromise);
-                }
-                Promise.all(queryPromises).then(()=>{
-                    let updatePromises: Promise<any>[] = [];
-                    let users = Array.from(user_dbId.keys());
-                    let max = users.length-1;
-                    for(let k = 0; k < users.length; k++){
-                        let prevIndex = (k-1 >= 0)? k-1 : max;
-                        let nextIndex = (k+1) %(max+1);
-                        //console.log("k= ",k," prev = ", prevIndex, " next = ", nextIndex, " users[k] = ", users[k], " users[prev] = ", users[prevIndex]," users[next] = ", users[nextIndex], " id users[prev] = ", user_dbId.get(users[prevIndex]), " id users[next] = ", user_dbId.get(users[nextIndex])," id users[k] = ", user_dbId.get(users[k]));
-                        updatePromises.push(new Promise((resolve, reject)=>{
-                            db.conn.query('UPDATE mwo.chains SET prevNodeId = ?, nextNodeId = ? WHERE id = ?', [user_dbId.get(users[prevIndex]), user_dbId.get(users[nextIndex]), user_dbId.get(users[k])], function(err, res){
-                                if(err) {
-                                    console.log(err);
-
-                                    db.conn.rollback(function(){
-                                    })
-                                }
-                                else return resolve(res);
-                            })
-                        }))
-                    }
-                    return updatePromises;
-                }).then(promisesArray => {
-                    return Promise.all(promisesArray);
-                }).then(response => {
-                })
-            }
-            db.conn.commit(function(err){
+        let taken = false;
+        circuit.forEach(edge => {
+            taken = taken || this.blockedItem.get(edge.toItem);
+            this.blockedItem.set(edge.toItem, true);
+        })
+        if(!taken)
+        {
+            db.conn.beginTransaction(function(err) {
                 if(err){
                     console.log(err);
 
@@ -199,19 +152,78 @@ class AlgorithmManager{
                         console.log(err);
                     })
                 }
-                else{
+                else
+                {
+                    let queryPromises = [];
+                    for(let i = 0; i < circuit.length; i++)
+                    {
+                        let edge = circuit[i];
+                        
+                        let queryPromise = new Promise((resolve ,reject)=>{
+                            db.conn.query('INSERT INTO mwo.chains (userId, myItemId, chainStatus) VALUES (?, ?, ?)', [edge.to, edge.toItem, "PENDING"], function(error, res){
+                                if(error){
+                                    console.log(error);
+
+                                    db.conn.rollback(function(){
+                                        console.log(err);
+                                    })
+                                }
+                                else if(res){
+                                    user_dbId.set(edge.to, res.insertId);
+                                    return resolve();
+                                }
+                            })
+                        });
+                        queryPromises.push(queryPromise);
+                    }
+                    Promise.all(queryPromises).then(()=>{
+                        let updatePromises: Promise<any>[] = [];
+                        let users = Array.from(user_dbId.keys());
+                        let max = users.length-1;
+                        for(let k = 0; k < users.length; k++){
+                            let prevIndex = (k-1 >= 0)? k-1 : max;
+                            let nextIndex = (k+1) %(max+1);
+                            console.log("k= ",k," prev = ", prevIndex, " next = ", nextIndex, " users[k] = ", users[k], " users[prev] = ", users[prevIndex]," users[next] = ", users[nextIndex], " id users[prev] = ", user_dbId.get(users[prevIndex]), " id users[next] = ", user_dbId.get(users[nextIndex])," id users[k] = ", user_dbId.get(users[k]));
+                            updatePromises.push(new Promise((resolve, reject)=>{
+                                db.conn.query('UPDATE mwo.chains SET prevNodeId = ?, nextNodeId = ? WHERE id = ?', [user_dbId.get(users[prevIndex]), user_dbId.get(users[nextIndex]), user_dbId.get(users[k])], function(err, res){
+                                    if(err) {
+                                        console.log(err);
+
+                                        db.conn.rollback(function(){
+                                        })
+                                    }
+                                    else return resolve(res);
+                                })
+                            }))
+                        }
+                        return updatePromises;
+                    }).then(promisesArray => {
+                        return Promise.all(promisesArray);
+                    }).then(response => {
+                    })
                 }
+                db.conn.commit(function(err){
+                    if(err){
+                        console.log(err);
+
+                        db.conn.rollback(function(){
+                            console.log(err);
+                        })
+                    }
+                    else{
+                    }
+                })
             })
-        })
+        }
     }
     public unblock(u: number){
-        this.blocked.set(u, false);
+        this.blockedVerticle.set(u, false);
     
         let bu = this.b.get(u);
         if(bu !== undefined)
         {
             bu.forEach(w => {
-                if(this.blocked.get(w)){
+                if(this.blockedVerticle.get(w)){
                     this.unblock(w);
                 }
             })
@@ -226,7 +238,7 @@ export function startAlgorithm(){
     let algorithmManager = new AlgorithmManager()
     let graph = new Map<number, Array<Edge>>()
     let circuitLength = 4;
-    db.conn.query("SELECT s.id, s.userId, i.itemUserId, s.itemId FROM mwo.swipes AS s JOIN mwo.items AS i ON s.itemId = i.id WHERE s.wanted = 1", [], (err, result) => {
+    db.conn.query("SELECT s.id, s.userId, i.itemUserId, s.itemId FROM mwo.swipes AS s JOIN mwo.items AS i ON s.itemId = i.id LEFT JOIN mwo.chains AS c ON i.id = c.myItemId WHERE s.wanted = 1 AND c.id IS NULL", [], (err, result) => {
         let startVerticle = 1;
         if(result && Array.isArray(result) && !err){
             
@@ -260,6 +272,9 @@ export function startAlgorithm(){
             startVerticle = result[Math.floor(Math.random()*(result.length-1))].userId;
             algorithmManager.startAlgorithm(startVerticle, circuitLength);
             
+            console.log("Edges: ", result.length);
+            console.log("Circuits: ", circuitCount);
+            console.log("Edges covered: ", endges);
         }
     })
 

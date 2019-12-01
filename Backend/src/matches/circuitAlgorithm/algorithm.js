@@ -19,7 +19,7 @@ var AlgorithmManager = /** @class */ (function () {
         this.myStack = new Array();
         this.adjacencyStructure = new Map();
         this.b = new Map();
-        this.blocked = new Map();
+        this.blockedVerticle = new Map();
     }
     AlgorithmManager.prototype.unstackFrom = function (index, stack) {
         var result = [];
@@ -35,11 +35,12 @@ var AlgorithmManager = /** @class */ (function () {
         this.adjacencyStructure = newGraph;
         this.taken = new Map();
         this.edgeTaken = new Map();
+        this.blockedItem = new Map();
     };
     AlgorithmManager.prototype.startAlgorithm = function (startVerticle, circuitLength) {
         this.myStack = new Array();
         this.b = new Map();
-        this.blocked = new Map();
+        this.blockedVerticle = new Map();
         this.circuit(startVerticle, circuitLength);
     };
     AlgorithmManager.prototype.circuit = function (v, circuitLength) {
@@ -48,7 +49,7 @@ var AlgorithmManager = /** @class */ (function () {
         if (Av == undefined) {
             return f;
         }
-        this.blocked.set(v, true);
+        this.blockedVerticle.set(v, true);
         for (var i = 0; i < Av.length; i++) {
             var edge = Av[i];
             if (!this.edgeTaken.get(edge.id)) {
@@ -62,7 +63,7 @@ var AlgorithmManager = /** @class */ (function () {
                     this.circuitFound(temp.circuit);
                     return f;
                 }
-                if (!this.blocked.get(edge.to)) {
+                if (!this.blockedVerticle.get(edge.to) && !this.blockedItem.get(edge.toItem)) {
                     f = this.circuit(edge.to, circuitLength);
                     if (f > 0) {
                         f--;
@@ -104,69 +105,17 @@ var AlgorithmManager = /** @class */ (function () {
         }
     };
     AlgorithmManager.prototype.circuitFound = function (circuit) {
+        var _this = this;
         var user_dbId = new Map();
         circuitCount++;
         endges += circuit.length;
-        db.conn.beginTransaction(function (err) {
-            if (err) {
-                console.log(err);
-                db.conn.rollback(function () {
-                    console.log(err);
-                });
-            }
-            else {
-                var queryPromises = [];
-                var _loop_1 = function (i) {
-                    var edge = circuit[i];
-                    var queryPromise = new Promise(function (resolve, reject) {
-                        db.conn.query('INSERT INTO mwo.chains (userId, myItemId, chainStatus) VALUES (?, ?, ?)', [edge.to, edge.toItem, "PENDING"], function (error, res) {
-                            if (error) {
-                                console.log(error);
-                                db.conn.rollback(function () {
-                                    console.log(err);
-                                });
-                            }
-                            else if (res) {
-                                user_dbId.set(edge.to, res.insertId);
-                                return resolve();
-                            }
-                        });
-                    });
-                    queryPromises.push(queryPromise);
-                };
-                for (var i = 0; i < circuit.length; i++) {
-                    _loop_1(i);
-                }
-                Promise.all(queryPromises).then(function () {
-                    var updatePromises = [];
-                    var users = Array.from(user_dbId.keys());
-                    var max = users.length - 1;
-                    var _loop_2 = function (k) {
-                        var prevIndex = (k - 1 >= 0) ? k - 1 : max;
-                        var nextIndex = (k + 1) % (max + 1);
-                        //console.log("k= ",k," prev = ", prevIndex, " next = ", nextIndex, " users[k] = ", users[k], " users[prev] = ", users[prevIndex]," users[next] = ", users[nextIndex], " id users[prev] = ", user_dbId.get(users[prevIndex]), " id users[next] = ", user_dbId.get(users[nextIndex])," id users[k] = ", user_dbId.get(users[k]));
-                        updatePromises.push(new Promise(function (resolve, reject) {
-                            db.conn.query('UPDATE mwo.chains SET prevNodeId = ?, nextNodeId = ? WHERE id = ?', [user_dbId.get(users[prevIndex]), user_dbId.get(users[nextIndex]), user_dbId.get(users[k])], function (err, res) {
-                                if (err) {
-                                    console.log(err);
-                                    db.conn.rollback(function () {
-                                    });
-                                }
-                                else
-                                    return resolve(res);
-                            });
-                        }));
-                    };
-                    for (var k = 0; k < users.length; k++) {
-                        _loop_2(k);
-                    }
-                    return updatePromises;
-                }).then(function (promisesArray) {
-                    return Promise.all(promisesArray);
-                }).then(function (response) {
-                });
-            }
-            db.conn.commit(function (err) {
+        var taken = false;
+        circuit.forEach(function (edge) {
+            taken = taken || _this.blockedItem.get(edge.toItem);
+            _this.blockedItem.set(edge.toItem, true);
+        });
+        if (!taken) {
+            db.conn.beginTransaction(function (err) {
                 if (err) {
                     console.log(err);
                     db.conn.rollback(function () {
@@ -174,17 +123,77 @@ var AlgorithmManager = /** @class */ (function () {
                     });
                 }
                 else {
+                    var queryPromises = [];
+                    var _loop_1 = function (i) {
+                        var edge = circuit[i];
+                        var queryPromise = new Promise(function (resolve, reject) {
+                            db.conn.query('INSERT INTO mwo.chains (userId, myItemId, chainStatus) VALUES (?, ?, ?)', [edge.to, edge.toItem, "PENDING"], function (error, res) {
+                                if (error) {
+                                    console.log(error);
+                                    db.conn.rollback(function () {
+                                        console.log(err);
+                                    });
+                                }
+                                else if (res) {
+                                    user_dbId.set(edge.to, res.insertId);
+                                    return resolve();
+                                }
+                            });
+                        });
+                        queryPromises.push(queryPromise);
+                    };
+                    for (var i = 0; i < circuit.length; i++) {
+                        _loop_1(i);
+                    }
+                    Promise.all(queryPromises).then(function () {
+                        var updatePromises = [];
+                        var users = Array.from(user_dbId.keys());
+                        var max = users.length - 1;
+                        var _loop_2 = function (k) {
+                            var prevIndex = (k - 1 >= 0) ? k - 1 : max;
+                            var nextIndex = (k + 1) % (max + 1);
+                            console.log("k= ", k, " prev = ", prevIndex, " next = ", nextIndex, " users[k] = ", users[k], " users[prev] = ", users[prevIndex], " users[next] = ", users[nextIndex], " id users[prev] = ", user_dbId.get(users[prevIndex]), " id users[next] = ", user_dbId.get(users[nextIndex]), " id users[k] = ", user_dbId.get(users[k]));
+                            updatePromises.push(new Promise(function (resolve, reject) {
+                                db.conn.query('UPDATE mwo.chains SET prevNodeId = ?, nextNodeId = ? WHERE id = ?', [user_dbId.get(users[prevIndex]), user_dbId.get(users[nextIndex]), user_dbId.get(users[k])], function (err, res) {
+                                    if (err) {
+                                        console.log(err);
+                                        db.conn.rollback(function () {
+                                        });
+                                    }
+                                    else
+                                        return resolve(res);
+                                });
+                            }));
+                        };
+                        for (var k = 0; k < users.length; k++) {
+                            _loop_2(k);
+                        }
+                        return updatePromises;
+                    }).then(function (promisesArray) {
+                        return Promise.all(promisesArray);
+                    }).then(function (response) {
+                    });
                 }
+                db.conn.commit(function (err) {
+                    if (err) {
+                        console.log(err);
+                        db.conn.rollback(function () {
+                            console.log(err);
+                        });
+                    }
+                    else {
+                    }
+                });
             });
-        });
+        }
     };
     AlgorithmManager.prototype.unblock = function (u) {
         var _this = this;
-        this.blocked.set(u, false);
+        this.blockedVerticle.set(u, false);
         var bu = this.b.get(u);
         if (bu !== undefined) {
             bu.forEach(function (w) {
-                if (_this.blocked.get(w)) {
+                if (_this.blockedVerticle.get(w)) {
                     _this.unblock(w);
                 }
             });
@@ -197,7 +206,7 @@ function startAlgorithm() {
     var algorithmManager = new AlgorithmManager();
     var graph = new Map();
     var circuitLength = 4;
-    db.conn.query("SELECT s.id, s.userId, i.itemUserId, s.itemId FROM mwo.swipes AS s JOIN mwo.items AS i ON s.itemId = i.id WHERE s.wanted = 1", [], function (err, result) {
+    db.conn.query("SELECT s.id, s.userId, i.itemUserId, s.itemId FROM mwo.swipes AS s JOIN mwo.items AS i ON s.itemId = i.id LEFT JOIN mwo.chains AS c ON i.id = c.myItemId WHERE s.wanted = 1 AND c.id IS NULL", [], function (err, result) {
         var startVerticle = 1;
         if (result && Array.isArray(result) && !err) {
             startVerticle = result[Math.floor(result.length / 2)].userId;
@@ -222,6 +231,9 @@ function startAlgorithm() {
             algorithmManager.startAlgorithm(startVerticle, circuitLength);
             startVerticle = result[Math.floor(Math.random() * (result.length - 1))].userId;
             algorithmManager.startAlgorithm(startVerticle, circuitLength);
+            console.log("Edges: ", result.length);
+            console.log("Circuits: ", circuitCount);
+            console.log("Edges covered: ", endges);
         }
     });
 }
