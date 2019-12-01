@@ -1,17 +1,13 @@
 "use strict";
 exports.__esModule = true;
+var db = require('../../main');
+var circuitCount = 0;
+var endges = 0;
 var Edge = /** @class */ (function () {
     function Edge() {
     }
     return Edge;
 }());
-function unstack(edge, stack) {
-    stack = stack.filter(function (item) { return item.id != edge.id; });
-}
-function unstackFrom(index, stack) {
-    var result = stack.splice(index, stack.length - index);
-    return result;
-}
 var State;
 (function (State) {
     State[State["Taken"] = 0] = "Taken";
@@ -25,61 +21,65 @@ var AlgorithmManager = /** @class */ (function () {
         this.b = new Map();
         this.blocked = new Map();
     }
+    AlgorithmManager.prototype.unstackFrom = function (index, stack) {
+        var result = [];
+        for (var i = 0; i < stack.length; i++) {
+            if (i >= index) {
+                result.push(stack[i]);
+                this.edgeTaken.set(stack[i].id, true);
+            }
+        }
+        return result;
+    };
     AlgorithmManager.prototype.loadGraph = function (newGraph) {
         this.adjacencyStructure = newGraph;
+        this.taken = new Map();
+        this.edgeTaken = new Map();
     };
     AlgorithmManager.prototype.startAlgorithm = function (startVerticle, circuitLength) {
-        // this.myStack = new Array<Edge>();
-        // this.b = new Map<number, Array<number>>();
-        // this.blocked = new Map<number, boolean>();
-        // this.taken = new Map<number, State>();
-        // console.log("CIRCUIT 1: ")
-        // this.circuit(startVerticle, startVerticle, circuitLength);
         this.myStack = new Array();
         this.b = new Map();
         this.blocked = new Map();
-        this.taken = new Map();
-        console.log("CIRCUIT 2: ");
-        this.circuit2(1, circuitLength);
+        this.circuit(startVerticle, circuitLength);
     };
-    AlgorithmManager.prototype.cutOut = function (tail) {
-        var _this = this;
-        tail.forEach(function (item) {
-            var temp = _this.adjacencyStructure.get(item.from);
-            temp = temp.filter(function (edge) {
-                return edge.id !== item.id;
-            });
-            _this.adjacencyStructure.set(item.from, temp);
-        });
-    };
-    AlgorithmManager.prototype.circuit2 = function (v, circuitLength) {
-        var _this = this;
-        var f = false;
-        this.blocked.set(v, true);
+    AlgorithmManager.prototype.circuit = function (v, circuitLength) {
+        var f = -2;
         var Av = this.adjacencyStructure.get(v);
-        Av.forEach(function (edge) {
-            if (_this.taken.get(v) === State.Taken) {
-                return f;
-            }
-            _this.myStack.push(edge);
-            var temp = _this.intersects(edge, circuitLength);
-            if (temp.intersects) {
-                f = true;
-                console.log("\ncircuit");
-                console.log(temp.circuit);
-                _this.cutOut(temp.circuit);
-                _this.myStack.pop();
-                return f;
-            }
-            if (!_this.blocked.get(edge.to)) {
-                if (_this.circuit2(edge.to, circuitLength)) {
-                    f = true;
-                    _this.myStack.pop();
+        if (Av == undefined) {
+            return f;
+        }
+        this.blocked.set(v, true);
+        for (var i = 0; i < Av.length; i++) {
+            var edge = Av[i];
+            if (!this.edgeTaken.get(edge.id)) {
+                this.myStack.push(edge);
+                var temp = this.intersects(edge, circuitLength);
+                if (temp.intersects) {
+                    f = temp.circuit.length - 1;
+                    this.myStack.pop();
+                    this.unblock(v);
+                    this.circuitFound(temp.circuit);
                     return f;
                 }
+                if (!this.blocked.get(edge.to)) {
+                    f = this.circuit(edge.to, circuitLength);
+                    if (f > 0) {
+                        f--;
+                        this.myStack.pop();
+                        this.unblock(v);
+                        return f;
+                    }
+                    else if (f === -2) {
+                        this.edgeTaken.set(edge.id, true);
+                    }
+                    else {
+                        f = -1;
+                    }
+                }
+                this.myStack.pop();
             }
-            _this.myStack.pop();
-        });
+        }
+        ;
         this.unblock(v);
         return f;
     };
@@ -89,7 +89,7 @@ var AlgorithmManager = /** @class */ (function () {
             return item.from === edge.to;
         });
         if (index >= 0) {
-            var circuit = tail; //unstackFrom(index, tail);
+            var circuit = this.unstackFrom(index, tail);
             return {
                 intersects: true,
                 circuit: circuit
@@ -102,49 +102,10 @@ var AlgorithmManager = /** @class */ (function () {
             };
         }
     };
-    AlgorithmManager.prototype.circuit = function (v, startVerticle, circuitLength) {
-        var _this = this;
-        var f = false;
-        this.blocked.set(v, true);
-        var Av = this.adjacencyStructure.get(v);
-        if (Av == undefined) {
-            return false;
-        }
-        Av.forEach(function (edge) {
-            _this.stack(edge);
-            if (edge.to == startVerticle && _this.myStack.length <= circuitLength && _this.myStack.length > 1) {
-                _this.circuitFound(v);
-                f = true;
-                return f;
-            }
-            else if (!_this.blocked.get(edge.to)) {
-                if (_this.circuit(edge.to, startVerticle, circuitLength)) {
-                    f = true;
-                    return f;
-                }
-            }
-            _this.unstack(edge);
-        });
-        this.unblock(v);
-        // else{
-        //     let Av2 = this.adjacencyStructure.get(v);
-        //     Av2.forEach(edge => {
-        //         let bArray = this.b.get(edge.verticle)
-        //         if(bArray.includes(v)){
-        //             bArray.push(v)
-        //         }
-        //     })
-        // }
-        return f;
-    };
-    AlgorithmManager.prototype.block = function (u) {
-        this.blocked.set(u, true);
-    };
-    AlgorithmManager.prototype.stack = function (v) {
-        this.myStack.push(v);
-    };
-    AlgorithmManager.prototype.unstack = function (v) {
-        unstack(v, this.myStack);
+    AlgorithmManager.prototype.circuitFound = function (circuit) {
+        circuitCount++;
+        endges += circuit.length;
+        console.log("Circuit: ", circuit);
     };
     AlgorithmManager.prototype.unblock = function (u) {
         var _this = this;
@@ -159,30 +120,60 @@ var AlgorithmManager = /** @class */ (function () {
         }
         this.b.set(u, []);
     };
-    AlgorithmManager.prototype.circuitFound = function (startVerticle) {
-        console.log("circuit: ", startVerticle);
-        // console.log(this.myStack.stack)
-        console.log(this.myStack);
-        this.myStack = new Array();
-    };
     return AlgorithmManager;
 }());
-function staryAlgortihm() {
+function startAlgortihm() {
     var algorithmManager = new AlgorithmManager();
-    algorithmManager.loadGraph(generateDummyData(2000, 1999));
-    algorithmManager.startAlgorithm(1, 6);
+    var graph = new Map();
+    var circuitLength = 4;
+    db.conn.query("SELECT s.id, s.userId, i.itemUserId, s.itemId FROM mwo.swipes AS s JOIN mwo.items AS i ON s.itemId = i.id WHERE s.wanted = 1", [], function (err, result) {
+        //console.log("Result: ", result, " err: ", err);
+        var startVerticle = 1;
+        if (result && Array.isArray(result) && !err) {
+            startVerticle = result[Math.floor(result.length / 2)].userId;
+            result.forEach(function (swipe) {
+                var temp = graph.get(swipe.userId) || [];
+                temp.push({
+                    id: swipe.id,
+                    to: swipe.itemUserId,
+                    from: swipe.userId,
+                    toItem: swipe.itemId
+                });
+                graph.set(swipe.userId, temp);
+            });
+            //console.log(graph)
+            algorithmManager.loadGraph(graph);
+            startVerticle = result[Math.floor(result.length / 2)].userId;
+            algorithmManager.startAlgorithm(startVerticle, circuitLength);
+            startVerticle = result[result.length - 1].userId;
+            algorithmManager.startAlgorithm(startVerticle, circuitLength);
+            startVerticle = result[0].userId;
+            algorithmManager.startAlgorithm(startVerticle, circuitLength);
+            startVerticle = result[Math.floor(result.length / 3)].userId;
+            algorithmManager.startAlgorithm(startVerticle, circuitLength);
+            startVerticle = result[Math.floor(2 * result.length / 3)].userId;
+            algorithmManager.startAlgorithm(startVerticle, circuitLength);
+            console.log("Edges: ");
+            console.log(result.length);
+            console.log("Circuit count: ");
+            console.log(circuitCount);
+            console.log("Covered Edges: ");
+            console.log(endges);
+        }
+    });
+    // algorithmManager.loadGraph(generateDummyData(10000, 7500));
+    // algorithmManager.startAlgorithm(1, 6);
 }
-exports.staryAlgortihm = staryAlgortihm;
-function test() {
-}
-exports.test = test;
+exports.startAlgortihm = startAlgortihm;
 function dummyData() {
     var dummyData = new Map();
-    dummyData.set(1, [{ id: "12", to: 2, from: 1 }, { id: "15", to: 5, from: 1 }]);
-    dummyData.set(2, [{ id: "23", to: 3, from: 2 }, { id: "25", to: 5, from: 2 }]);
-    dummyData.set(3, [{ id: "31", to: 1, from: 3 }]);
-    dummyData.set(4, [{ id: "41", to: 1, from: 4 }, { id: "45", to: 5, from: 4 }]);
-    dummyData.set(5, [{ id: "51", to: 1, from: 5 }, { id: "54", to: 4, from: 5 }]);
+    // dummyData.set(1, [{ id: "12", to: 2, from: 1 }, { id: "18", to: 8, from: 1}, { id: "17", to: 7, from: 1}])
+    // dummyData.set(2, [{ id: "23", to: 3, from: 2 }, { id: "24", to: 4, from: 2 }, { id: "25", to: 5, from: 2 }])
+    // dummyData.set(3, [{ id: "36", to: 6, from: 3 }])
+    // dummyData.set(4, [{ id: "46", to: 6, from: 4 }])
+    // dummyData.set(5, [{ id: "56", to: 6, from: 5 }])
+    // dummyData.set(6, [{ id: "67", to: 7, from: 6 }, { id: "64", to: 4, from: 6 }, { id: "65", to: 5, from: 6 }])
+    // dummyData.set(7, [{ id: "73", to: 3, from: 7 }, { id: "78", to: 8, from: 7}])
     return dummyData;
 }
 function generateDummyData(n, edgesPerVerticle) {
@@ -191,7 +182,7 @@ function generateDummyData(n, edgesPerVerticle) {
         var array = [];
         var temp = i;
         for (var j = 1; j < edgesPerVerticle; j++) {
-            var randNumber = (temp + j) % n + 1;
+            var randNumber = Math.floor(Math.random() * n); //(temp + j) % n + 1;
             array.push({ id: "" + randNumber + i, to: randNumber, from: i });
         }
         dummyData.set(i, array);
@@ -199,4 +190,4 @@ function generateDummyData(n, edgesPerVerticle) {
     //console.log(dummyData)
     return dummyData;
 }
-staryAlgortihm();
+startAlgortihm();

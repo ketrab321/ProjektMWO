@@ -1,19 +1,14 @@
+
+const db = require('../../main');
+
+var circuitCount = 0;
+var endges = 0;
 class Edge{
     from: number;
     to: number;
-    id: string;
+    id: number;
+    toItem: number;
 }
-
-
-    function unstack(edge: Edge, stack: Array<Edge>){
-        stack = stack.filter(item => item.id != edge.id)
-    }
-
-
-    function unstackFrom(index: number, stack: Array<Edge>){
-        let result = stack.splice(index, stack.length - index);
-        return result
-    }
 
 enum State {
     Taken, Blocked, Free
@@ -25,7 +20,7 @@ class AlgorithmManager{
     public blocked: Map<number, boolean>;
     public b: Map<number, Array<number>>;
     public taken: Map<number, State>;
-    public edgeTaken: Map<string, boolean>
+    public edgeTaken: Map<number, boolean>;
 
     constructor(){
         this.myStack = new Array<Edge>(); 
@@ -34,80 +29,80 @@ class AlgorithmManager{
         this.blocked = new Map<number, boolean>();
     }
 
+    public unstackFrom(index: number, stack: Array<Edge>){
+        let result = []
+        for(let i = 0; i < stack.length; i++){
+            if(i >= index){
+                result.push(stack[i])
+                this.edgeTaken.set(stack[i].id, true);
+            }
+        }
+        return result
+    }
     public loadGraph(newGraph: Map<number, Array<Edge>>){
         this.adjacencyStructure = newGraph;
+        this.taken = new Map<number, State>();
+        this.edgeTaken = new Map<number, boolean>();
     }
 
     public startAlgorithm(startVerticle: number, circuitLength: number){
-        // this.myStack = new Array<Edge>();
-        // this.b = new Map<number, Array<number>>();
-        // this.blocked = new Map<number, boolean>();
-        // this.taken = new Map<number, State>();
-
-        // console.log("CIRCUIT 1: ")
-        // this.circuit(startVerticle, startVerticle, circuitLength);
 
         this.myStack = new Array<Edge>();
         this.b = new Map<number, Array<number>>();
         this.blocked = new Map<number, boolean>();
-        this.taken = new Map<number, State>();
-        this.edgeTaken = new Map<string, boolean>();
-        console.log("CIRCUIT 2: ")
-        this.circuit2(1, circuitLength);
         
-
+        this.circuit(startVerticle, circuitLength);
     }
 
-    public cutOut(tail: Array<Edge>){
-        tail.forEach(item => {
-            let temp = this.adjacencyStructure.get(item.from)
-            temp = temp.filter(edge => {
-                return edge.id !== item.id;
-            })
-
-            this.adjacencyStructure.set(item.from, temp);
-        })
-    }
-    public circuit2(v: number, circuitLength: number): boolean{
-        let f = false;
+    public circuit(v: number, circuitLength: number): number{
+        let f = -2;
+        let Av = this.adjacencyStructure.get(v);
+        if(Av == undefined)
+        {
+            return f;
+        }
         this.blocked.set(v, true);
 
-        let Av = this.adjacencyStructure.get(v);
-        
-        Av.forEach(edge => {
-
-            if(this.taken.get(v) === State.Taken)
+        for(let i = 0; i < Av.length; i++)
+        {
+            let edge = Av[i];
+            if(!this.edgeTaken.get(edge.id))
             {
-                return f;
-            }
-            this.myStack.push(edge);
+                this.myStack.push(edge);
+                let temp = this.intersects(edge, circuitLength);
 
-            let temp = this.intersects(edge, circuitLength);
-
-            if( temp.intersects ){
-                f= true; 
-                console.log("\ncircuit")
-                console.log(temp.circuit)
-                this.cutOut(temp.circuit);
-                this.myStack.pop()
-
-                return f;
-            }
-            if(!this.blocked.get(edge.to)){ 
-                if(this.circuit2(edge.to, circuitLength))
-                {
-                    f = true;
+                if( temp.intersects ){
+                    f= temp.circuit.length - 1;    
                     this.myStack.pop()
+                    this.unblock(v);
+                    this.circuitFound(temp.circuit);
                     return f;
                 }
+                if(!this.blocked.get(edge.to)){
+                f = this.circuit(edge.to, circuitLength)
+                    if(f > 0)
+                    {
+                        f--;
+                        this.myStack.pop()
+                        this.unblock(v);
+
+                        return f;
+                    }
+                    else if(f === -2)
+                    {
+                        this.edgeTaken.set(edge.id, true);
+                    }
+                    else
+                    {
+                        f = -1;
+                    }
+                }
+                this.myStack.pop()
+
             }
-            this.myStack.pop()
+        };
+        this.unblock(v);
 
-        });
-
-        if(!f){
-            
-        }
         return f;
     }
 
@@ -117,7 +112,7 @@ class AlgorithmManager{
             return item.from === edge.to;
         })
         if(index >= 0){
-            let circuit = tail//unstackFrom(index, tail);
+            let circuit = this.unstackFrom(index, tail);
             return {
                 intersects: true,
                 circuit: circuit
@@ -131,57 +126,54 @@ class AlgorithmManager{
             }
         }
     }
-    public circuit(v: number, startVerticle: number, circuitLength: number): boolean{
-        let f = false;
-        this.blocked.set(v, true);
-        let Av = this.adjacencyStructure.get(v);
-        if(Av == undefined)
-        {
 
-            return false;
-        }
-        Av.forEach(edge => {
-            this.stack(edge);
-            if(edge.to == startVerticle && this.myStack.length <= circuitLength && this.myStack.length > 1){
-                this.circuitFound(v);
-                f= true;
-                return f;
+    public circuitFound(circuit: Array<Edge>){
+        let user_dbId = new Map<number, number>();
+        circuitCount++;
+        endges+=circuit.length;
+        db.conn.beginTransaction(function(err) {
+            if(err){
+                console.log(err);
             }
-            else if(!this.blocked.get(edge.to)){
-                
-                if(this.circuit(edge.to, startVerticle, circuitLength)){
-                    f = true;
-                    return f;
+            else
+            {
+                let queryPromises = [];
+                for(let i = 0; i < circuit.length; i++)
+                {
+                    let edge = circuit[i];
+                    let queryPromise = new Promise((resolve ,reject)=>{
+                        db.conn.query('INSERT INTO mwo.chains (userId, myItemId, chainStatus) VALUES ?', [[edge.to, edge.toItem, "PENDING"]], function(error, res){
+                            if(error){
+                                console.log(error);
+                                return reject(err);
+                            }
+                            else if(res){
+                                user_dbId.set(edge.to, res.insertId);
+                                return resolve();
+                            }
+                        })
+                    });
+                    queryPromises.push(queryPromise);
                 }
+                Promise.all(queryPromises).then(()=>{
+                    console.log(user_dbId);
+                    let updatePromises = [];
+                    let users = Array.from(user_dbId.keys());
+                    let max = users.length-1;
+                    for(let k = 0; k < users.length; k++){
+                        let prevIndex = (k-1 >= 0)? k-1 : max;
+                        let nextIndex = k %(max+1);
+                        updatePromises.push(new Promise((resolve, reject)=>{
+                            db.conn.query('UPDATE mwo.chains SET prevNodeId = ?, nextNodeId = ?', [user_dbId.get(users[prevIndex]), user_dbId.get(users[nextIndex])], function(err, res){
+                                if(err) return reject(err)
+                                else return resolve(res);
+                            })
+                        }))
+                    }
+                        
+                })
             }
-            this.unstack(edge)
-
         })
-    
-        
-        this.unblock(v);
-        
-        // else{
-        //     let Av2 = this.adjacencyStructure.get(v);
-        //     Av2.forEach(edge => {
-        //         let bArray = this.b.get(edge.verticle)
-        //         if(bArray.includes(v)){
-        //             bArray.push(v)
-        //         }
-        //     })
-        // }
-        return f;
-    }
-    
-    public block(u: number){
-        this.blocked.set(u, true);
-    }
-    public stack(v: Edge){
-        this.myStack.push(v);
-    }
-
-    public unstack(v: Edge){
-        unstack(v, this.myStack);
     }
     public unblock(u: number){
         this.blocked.set(u, false);
@@ -198,38 +190,74 @@ class AlgorithmManager{
         
         this.b.set(u, []);
     }
-    
-    public circuitFound(startVerticle: number){
-        console.log("circuit: ", startVerticle)
-       // console.log(this.myStack.stack)
-       console.log(this.myStack)
-       this.myStack = new Array<Edge>()
-    }
-    
 }
 
 
-export function staryAlgortihm(){
+export function startAlgortihm(){
     let algorithmManager = new AlgorithmManager()
+    let graph = new Map<number, Array<Edge>>()
+    let circuitLength = 4;
+    db.conn.query("SELECT s.id, s.userId, i.itemUserId, s.itemId FROM mwo.swipes AS s JOIN mwo.items AS i ON s.itemId = i.id WHERE s.wanted = 1", [], (err, result) => {
+        //console.log("Result: ", result, " err: ", err);
+        let startVerticle = 1;
+        if(result && Array.isArray(result) && !err){
+            
+            startVerticle = result[Math.floor(result.length/2)].userId;
+            result.forEach(swipe => {
+                
+                let temp = graph.get(swipe.userId) || [];
+                temp.push({
+                    id: swipe.id,
+                    to: swipe.itemUserId,
+                    from: swipe.userId,
+                    toItem: swipe.itemId
+                });
+                graph.set(swipe.userId, temp)
+            })
+            //console.log(graph)
+            
+            algorithmManager.loadGraph(graph);
 
-    algorithmManager.loadGraph(generateDummyData(2000, 1999));
-    algorithmManager.startAlgorithm(1, 6);
+            startVerticle = result[Math.floor(result.length/2)].userId;
+            algorithmManager.startAlgorithm(startVerticle, circuitLength);
+
+            startVerticle = result[result.length-1].userId;
+            algorithmManager.startAlgorithm(startVerticle, circuitLength);
+
+            startVerticle = result[0].userId;
+            algorithmManager.startAlgorithm(startVerticle, circuitLength);
+
+            startVerticle = result[Math.floor(result.length/3)].userId;
+            algorithmManager.startAlgorithm(startVerticle, circuitLength);
+
+            startVerticle = result[Math.floor(2*result.length/3)].userId;
+            algorithmManager.startAlgorithm(startVerticle, circuitLength);
+            
+            console.log("Edges: ");
+            console.log(result.length);
+            console.log("Circuit count: ");
+            console.log(circuitCount);
+            console.log("Covered Edges: ")
+            console.log(endges)
+        }
+    })
+
+    // algorithmManager.loadGraph(generateDummyData(10000, 7500));
+    // algorithmManager.startAlgorithm(1, 6);
+
 }
 
-
-export function test(){
-
-}
 
 function dummyData(){
     let dummyData: Map<number, Array<Edge>> = new Map();
 
-    dummyData.set(1, [{ id: "12", to: 2, from: 1 }, { id: "15", to: 5, from: 1 }])
-    dummyData.set(2, [{ id: "23", to: 3, from: 2 }, { id: "25", to: 5, from: 2 }])
-    dummyData.set(3, [{ id: "31", to: 1, from: 3 }])
-    dummyData.set(4, [{ id: "41", to: 1, from: 4 }, { id: "45", to: 5, from: 4 }])
-    dummyData.set(5, [{ id: "51", to: 1, from: 5 }, { id: "54", to: 4, from: 5 }])
-
+    // dummyData.set(1, [{ id: "12", to: 2, from: 1 }, { id: "18", to: 8, from: 1}, { id: "17", to: 7, from: 1}])
+    // dummyData.set(2, [{ id: "23", to: 3, from: 2 }, { id: "24", to: 4, from: 2 }, { id: "25", to: 5, from: 2 }])
+    // dummyData.set(3, [{ id: "36", to: 6, from: 3 }])
+    // dummyData.set(4, [{ id: "46", to: 6, from: 4 }])
+    // dummyData.set(5, [{ id: "56", to: 6, from: 5 }])
+    // dummyData.set(6, [{ id: "67", to: 7, from: 6 }, { id: "64", to: 4, from: 6 }, { id: "65", to: 5, from: 6 }])
+    // dummyData.set(7, [{ id: "73", to: 3, from: 7 }, { id: "78", to: 8, from: 7}])
     return dummyData;
 }
 
@@ -240,7 +268,7 @@ function generateDummyData(n: number, edgesPerVerticle: number){
         let array = []
         let temp = i;
         for(let j = 1; j < edgesPerVerticle; j++){
-            let randNumber = (temp + j) % n + 1;
+            let randNumber = Math.floor(Math.random() * n)//(temp + j) % n + 1;
             array.push({ id: ""+randNumber + i, to: randNumber, from: i })
         }
         dummyData.set(i, array);
@@ -249,4 +277,5 @@ function generateDummyData(n: number, edgesPerVerticle: number){
     //console.log(dummyData)
     return dummyData;
 }
-staryAlgortihm();
+
+startAlgortihm();
