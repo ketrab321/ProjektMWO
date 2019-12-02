@@ -675,7 +675,7 @@ exports.get_all_matches = (req, res) => {
             var myItemId = row.myItemId
             var prevNode = row.prevNodeId
             var nextNode = row.nextNodeId
-            var status = row.status
+            var status = row.chainStatus
             var myItem
             var toWho
             var fromWho
