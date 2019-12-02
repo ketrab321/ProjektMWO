@@ -144,6 +144,12 @@ app.get('/matches/get-accepted-matches', [
     MatchesController.get_accepted
 ]);
 
+app.get('/matches/get-all-matches', [
+    AuthMiddleware.isJWTValid,
+    MatchesController.get_all_matches
+]);
+
+
 //###########################################
 
 //#########################################
