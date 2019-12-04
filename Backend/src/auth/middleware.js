@@ -94,39 +94,26 @@ exports.isJWTValid = (req, res, next) => {
                 });
             } else {
                 req.jwt = jwt.verify(authorization[1], jwtSecret);
-                // db.conn.connect(
-                //     function (err) {
-                //     if (err) {
-                //         console.log("!!! Cannot connect !!! Error:");
-                //         throw err;
-                //     }
-                //     else
-                //     {
-                //         console.log("Connection extablished")
-
-                        let query = "SELECT id FROM users WHERE id = '" + req.jwt.userId + "'";
-                        db.conn.query(query, (err, result) => {
-                            if (err) {
-                                err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
-                                return res.status(500).send({
-                                    success: false,
-                                    errors: [err],
-                                    data: null
-                                });
-                            }
-                            if (result.length > 0) {
-                                return next();
-                            } else {
-                                return res.status(403).send({
-                                    success: false,
-                                    errors: [{ message: 'Token expired' }],
-                                    data: null
-                                });
-                            }
+                let query = "SELECT id FROM users WHERE id = '" + req.jwt.userId + "'";
+                db.conn.query(query, (err, result) => {
+                    if (err) {
+                        err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
+                        return res.status(500).send({
+                            success: false,
+                            errors: [err],
+                            data: null
                         });
-
-                //     }
-                // });
+                    }
+                    if (result.length > 0) {
+                        return next();
+                    } else {
+                        return res.status(403).send({
+                            success: false,
+                            errors: [{ message: 'Token expired' }],
+                            data: null
+                        });
+                    }
+                });
             }
         } catch (err) {
             return res.status(403).send({
@@ -183,54 +170,40 @@ exports.isPassCorrect = [
         }
 
         try {
+            let query = "SELECT userPassword FROM users WHERE id = '" + req.jwt.userId + "'";
 
-            // db.conn.connect(
-            //     function (err) {
-            //     if (err) {
-            //         console.log("!!! Cannot connect !!! Error:");
-            //         throw err;
-            //     }
-            //     else
-            //     {
-            //         console.log("Connection extablished")
-
-                    let query = "SELECT userPassword FROM users WHERE id = '" + req.jwt.userId + "'";
-
-                    db.conn.query(query, (err, result) => {
-                        if (err) {
-                            err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
-                            return res.status(500).send({
-                                success: false,
-                                errors: [err],
-                                data: null
-                            });
-                        }
-
-                        if (result.length > 0) {
-                            let passwordFields = result[0].userPassword.split('$');
-                            let salt = passwordFields[0];
-                            let hash = crypto.createHmac('sha512', salt).update(req.body.password).digest("base64");
-
-                            if (hash === passwordFields[1]) {
-                                return next();
-                            } else {
-                                return res.status(400).send({
-                                    success: false,
-                                    errors: [{ message: 'Invalid password' }],
-                                    data: null
-                                });
-                            }
-                        } else {
-                            return res.status(404).send({
-                                success: false,
-                                errors: [{ message: 'No such user here' }],
-                                data: null
-                            });
-                        }
+            db.conn.query(query, (err, result) => {
+                if (err) {
+                    err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
+                    return res.status(500).send({
+                        success: false,
+                        errors: [err],
+                        data: null
                     });
+                }
 
-            //     }
-            // })
+                if (result.length > 0) {
+                    let passwordFields = result[0].userPassword.split('$');
+                    let salt = passwordFields[0];
+                    let hash = crypto.createHmac('sha512', salt).update(req.body.password).digest("base64");
+
+                    if (hash === passwordFields[1]) {
+                        return next();
+                    } else {
+                        return res.status(403).send({
+                            success: false,
+                            errors: [{ message: 'Invalid password' }],
+                            data: null
+                        });
+                    }
+                } else {
+                    return res.status(404).send({
+                        success: false,
+                        errors: [{ message: 'No such user here' }],
+                        data: null
+                    });
+                }
+            });
         } catch (err) {
             res.status(500).send({
                 success: false,

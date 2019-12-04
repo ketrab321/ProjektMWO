@@ -30,6 +30,7 @@ const UsersController = require('./users/controller');
 const AuthMiddleware = require('./auth/middleware');
 const AuthController = require('./auth/controller');
 const ItemsController = require('./items/controller');
+const MatchesController = require('./matches/controller');
 
 const port = process.env.PORT || 3000;
 
@@ -97,9 +98,9 @@ app.post('/users/login', [
     AuthController.login
 ]);
 
-app.post('/users/get', [
+app.get('/users/myself', [
     AuthMiddleware.isJWTValid,
-    UsersController.getById
+    UsersController.get_myself
 ]);
 
 app.post('/users/delete', [
@@ -108,122 +109,59 @@ app.post('/users/delete', [
     UsersController.delete
 ]);
 
+app.put('/users/update', [
+    AuthMiddleware.isJWTValid,
+    AuthMiddleware.isPassCorrect,
+    UsersController.update
+]);
+
 //###########################################
 
 //#########################################
 //########### MATCHES ENDPOINTS ###########
 //#########################################
 
-app.post('/matches/accept-match', (req, res) => {
-    new formidable.IncomingForm().parse(req, (err, fields, files) => {
-        if (err) {
-            throw err
-        }
+app.post('/matches/accept-match', [
+    AuthMiddleware.isJWTValid,
+    MatchesController.accept
+]);
 
-        let response = {
-            _metadata: {
-                fields: fields,
-                files: files
-            },
+app.post('/matches/decline-match', [
+    AuthMiddleware.isJWTValid,
+    MatchesController.decline
+]);
+
+app.post('/matches/confirm-match', [
+    AuthMiddleware.isJWTValid,
+    MatchesController.confirm
+]);
+
+app.get('/matches/get-pending-matches', [
+    AuthMiddleware.isJWTValid,
+    MatchesController.get_pending
+]);
+
+app.get('/matches/get-accepted-matches', [
+    AuthMiddleware.isJWTValid,
+    MatchesController.get_accepted
+]);
+
+//###########################################
+
+//#########################################
+//########### OTHER ENDPOINTS ###########
+//#########################################
+
+app.get('/auth/istokenvalid', [
+    AuthMiddleware.isJWTValid,
+    (_req, res) => {
+        return res.status(200).send({
             success: true,
             errors: null,
             data: null
-        };
-        res.send(response);
-    });
-});
-
-app.post('/matches/decline-match', (req, res) => {
-    new formidable.IncomingForm().parse(req, (err, fields, files) => {
-        if (err) {
-            throw err
-        }
-        let response = {
-            _metadata: {
-                fields: fields,
-                files: files
-            },
-            success: true,
-            errors: null,
-            data: null
-        };
-        res.send(response);
-    });
-});
-
-app.get('/matches/get-pending-matches', (req, res) => {
-
-    let response = {
-        success: true,
-        errors: null,
-        data: {
-            matches: [{
-                id: 2,
-                myItem: {
-                    name: "Ciasto",
-                    description: "smaczne",
-                    photoUrl: "https://www.mojewypieki.com/img/images/original/Ciasto_kinder_pingui_5_2411.jpg",
-                    priceCategory: "Ło ho ho miljony",
-                    category: "Jedzonko"
-                },
-                exchangeItem: {
-                    name: "Buty",
-                    description: "ładne",
-                    photoUrl: "https://st.depositphotos.com/1016026/4819/i/950/depositphotos_48194997-stock-photo-high-heel-shoes-and-bikini.jpg",
-                    priceCategory: "No drogie",
-                    category: "Ubranko"
-                },
-                toWho: {
-                    name: "macho6969",
-                },
-                fromWho: {
-                    name: "madka500plus",
-                }
-            }, ]
-        }
-    };
-    res.send(response);
-
-});
-
-app.get('/matches/get-accepted-matches', (req, res) => {
-
-    let response = {
-        success: true,
-        errors: null,
-        data: {
-            matches: [{
-                id: 2,
-                myItem: {
-                    name: "Ciasto",
-                    description: "smaczne",
-                    photoUrl: "https://www.mojewypieki.com/img/images/original/Ciasto_kinder_pingui_5_2411.jpg",
-                    priceCategory: "Ło ho ho miljony",
-                    category: "Jedzonko"
-                },
-                exchangeItem: {
-                    name: "Buty",
-                    description: "ładne",
-                    photoUrl: "https://st.depositphotos.com/1016026/4819/i/950/depositphotos_48194997-stock-photo-high-heel-shoes-and-bikini.jpg",
-                    priceCategory: "No drogie",
-                    category: "Ubranko"
-                },
-                toWho: {
-                    name: "macho6969",
-                    email: "macho6969@wp.pl",
-                    phone: "112 112 112"
-                },
-                fromWho: {
-                    name: "cichoń1000",
-                    email: "jacek.cichon@pwr.edu.pl",
-                    phone: "71 320 2109"
-                }
-            }, ]
-        }
-
-    };
-    res.send(response);
-});
+        });
+    }
+]);
 
 app.listen(port, () => {
     console.log("Server is up on port " + port);
