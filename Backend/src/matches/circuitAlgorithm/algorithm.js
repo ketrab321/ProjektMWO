@@ -202,6 +202,10 @@ var AlgorithmManager = /** @class */ (function () {
     };
     return AlgorithmManager;
 }());
+var logs = [];
+logs.push({
+    info: "this is logs for circuit finding algorithm"
+});
 function startAlgorithm() {
     var algorithmManager = new AlgorithmManager();
     var graph = new Map();
@@ -234,7 +238,16 @@ function startAlgorithm() {
             console.log("Edges: ", result.length);
             console.log("Circuits: ", circuitCount);
             console.log("Edges covered: ", endges);
+            logs.push({
+                time: Date.now(),
+                edges: result.length,
+                circuits: circuitCount,
+                edgesCovered: endges
+            });
+            circuitCount = 0;
+            endges = 0;
         }
     });
 }
 exports.startAlgorithm = startAlgorithm;
+module.exports.logs = logs;

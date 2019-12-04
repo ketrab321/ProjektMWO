@@ -233,6 +233,10 @@ class AlgorithmManager{
     }
 }
 
+const logs = [];
+logs.push({
+    info: "this is logs for circuit finding algorithm"
+})
 
 export function startAlgorithm(){
     let algorithmManager = new AlgorithmManager()
@@ -275,8 +279,19 @@ export function startAlgorithm(){
             console.log("Edges: ", result.length);
             console.log("Circuits: ", circuitCount);
             console.log("Edges covered: ", endges);
+
+            logs.push({
+                time: Date.now(),
+                edges: result.length,
+                circuits: circuitCount,
+                edgesCovered: endges,
+            })
+
+            circuitCount = 0;
+            endges = 0;
         }
     })
 
 
 }
+module.exports.logs = logs;
