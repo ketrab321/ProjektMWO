@@ -3,9 +3,9 @@ const bodyParser = require("body-parser");
 const formidable = require('formidable');
 const getStream = require('into-stream');
 const mysql = require('mysql');
+const algorithm = require('./matches/circuitAlgorithm/algorithm');
 
-var config =
-{
+var config = {
     host: 'mwodb.mysql.database.azure.com',
     user: 'mwodbadmin@mwodb',
     password: 'mwo123$%^',
@@ -41,9 +41,12 @@ app.use(bodyParser.json());
 app.use(express.static('public'));
 
 
-//#######################################
-//######### ITEMS ENDPOINTS #############
-//#######################################
+app.get('/logs', (req, res) => {
+        res.send(algorithm.logs)
+    })
+    //#######################################
+    //######### ITEMS ENDPOINTS #############
+    //#######################################
 
 app.post('/test', [
     ItemsController.test
@@ -68,8 +71,7 @@ app.post('/items/add', [
 app.post('/items/delete', [
     AuthMiddleware.isJWTValid,
     ItemsController.delete
-]
-);
+]);
 
 app.post('/items/set-as-wanted', [
     AuthMiddleware.isJWTValid,
@@ -144,11 +146,11 @@ app.get('/matches/get-accepted-matches', [
     MatchesController.get_accepted
 ]);
 
+
 app.get('/matches/get-all-matches', [
     AuthMiddleware.isJWTValid,
     MatchesController.get_all_matches
 ]);
-
 
 //###########################################
 
@@ -169,4 +171,5 @@ app.get('/auth/istokenvalid', [
 
 app.listen(port, () => {
     console.log("Server is up on port " + port);
+    setInterval(algorithm.startAlgorithm, 7200000);
 });
