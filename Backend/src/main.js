@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const formidable = require('formidable');
 const getStream = require('into-stream');
 const mysql = require('mysql');
+const algorithm = require('./matches/circuitAlgorithm/algorithm');
 
 var config =
 {
@@ -169,4 +170,5 @@ app.get('/auth/istokenvalid', [
 
 app.listen(port, () => {
     console.log("Server is up on port " + port);
+    setInterval(algorithm.startAlgorithm, 21600000);
 });
