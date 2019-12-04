@@ -5,8 +5,7 @@ const getStream = require('into-stream');
 const mysql = require('mysql');
 const algorithm = require('./matches/circuitAlgorithm/algorithm');
 
-var config =
-{
+var config = {
     host: 'mwodb.mysql.database.azure.com',
     user: 'mwodbadmin@mwodb',
     password: 'mwo123$%^',
@@ -41,35 +40,37 @@ app.use(bodyParser.json());
 app.use(express.static('public'));
 
 
-//#######################################
-//######### ITEMS ENDPOINTS #############
-//#######################################
+app.get('/logs', (req, res) => {
+        res.send(algorithm.logs)
+    })
+    //#######################################
+    //######### ITEMS ENDPOINTS #############
+    //#######################################
 
-app.post('/test',[
+app.post('/test', [
     ItemsController.test
 ])
 
-app.get('/items/get-rand-item',[
+app.get('/items/get-rand-item', [
     AuthMiddleware.isJWTValid,
     ItemsController.getRandomItem
 ]);
 
-app.get('/items/get-user-items',[
+app.get('/items/get-user-items', [
     AuthMiddleware.isJWTValid,
     ItemsController.getUserItems
 ]);
 
-app.post('/items/add',[
+app.post('/items/add', [
     AuthMiddleware.isJWTValid,
     ItemsController.add
 ]);
 
 
-app.post('/items/delete',[
+app.post('/items/delete', [
     AuthMiddleware.isJWTValid,
     ItemsController.delete
-]
-);
+]);
 
 app.post('/items/set-as-wanted', [
     AuthMiddleware.isJWTValid,
@@ -113,10 +114,10 @@ app.post('/users/delete', [
 //########### MATCHES ENDPOINTS ###########
 //#########################################
 
-app.post('/matches/accept-match',(req, res)=>{
+app.post('/matches/accept-match', (req, res) => {
     new formidable.IncomingForm().parse(req, (err, fields, files) => {
         if (err) {
-          throw err
+            throw err
         }
 
         let response = {
@@ -132,10 +133,10 @@ app.post('/matches/accept-match',(req, res)=>{
     });
 });
 
-app.post('/matches/decline-match',(req, res)=>{
+app.post('/matches/decline-match', (req, res) => {
     new formidable.IncomingForm().parse(req, (err, fields, files) => {
         if (err) {
-          throw err
+            throw err
         }
         let response = {
             _metadata: {
@@ -150,83 +151,81 @@ app.post('/matches/decline-match',(req, res)=>{
     });
 });
 
-app.get('/matches/get-pending-matches',(req, res)=>{
+app.get('/matches/get-pending-matches', (req, res) => {
 
-        let response = {
-            success: true,
-            errors: null,
-            data: {
-                matches: [
-                {
-                    id: 2,
-                    myItem: {
-                        name: "Ciasto",
-                        description: "smaczne",
-                        photoUrl: "https://www.mojewypieki.com/img/images/original/Ciasto_kinder_pingui_5_2411.jpg",
-                        priceCategory: "Ło ho ho miljony",
-                        category: "Jedzonko"
-                    },
-                    exchangeItem: {
-                        name: "Buty",
-                        description: "ładne",
-                        photoUrl: "https://st.depositphotos.com/1016026/4819/i/950/depositphotos_48194997-stock-photo-high-heel-shoes-and-bikini.jpg",
-                        priceCategory: "No drogie",
-                        category: "Ubranko"
-                    },
-                    toWho: {
-                        name: "macho6969",
-                    },
-                    fromWho: {
-                        name: "madka500plus",
-                    }
-                 },]
-               }
-        };
-        res.send(response);
+    let response = {
+        success: true,
+        errors: null,
+        data: {
+            matches: [{
+                id: 2,
+                myItem: {
+                    name: "Ciasto",
+                    description: "smaczne",
+                    photoUrl: "https://www.mojewypieki.com/img/images/original/Ciasto_kinder_pingui_5_2411.jpg",
+                    priceCategory: "Ło ho ho miljony",
+                    category: "Jedzonko"
+                },
+                exchangeItem: {
+                    name: "Buty",
+                    description: "ładne",
+                    photoUrl: "https://st.depositphotos.com/1016026/4819/i/950/depositphotos_48194997-stock-photo-high-heel-shoes-and-bikini.jpg",
+                    priceCategory: "No drogie",
+                    category: "Ubranko"
+                },
+                toWho: {
+                    name: "macho6969",
+                },
+                fromWho: {
+                    name: "madka500plus",
+                }
+            }, ]
+        }
+    };
+    res.send(response);
 
 });
 
-app.get('/matches/get-accepted-matches',(req, res)=>{
+app.get('/matches/get-accepted-matches', (req, res) => {
 
-        let response = {
-            success: true,
-            errors: null,
-            data: {
-                matches: [
-                {
-                    id: 2,
-                    myItem: {
-                        name: "Ciasto",
-                        description: "smaczne",
-                        photoUrl: "https://www.mojewypieki.com/img/images/original/Ciasto_kinder_pingui_5_2411.jpg",
-                        priceCategory: "Ło ho ho miljony",
-                        category: "Jedzonko"
-                    },
-                    exchangeItem: {
-                        name: "Buty",
-                        description: "ładne",
-                        photoUrl: "https://st.depositphotos.com/1016026/4819/i/950/depositphotos_48194997-stock-photo-high-heel-shoes-and-bikini.jpg",
-                        priceCategory: "No drogie",
-                        category: "Ubranko"
-                    },
-                    toWho: {
-                        name: "macho6969",
-                        email: "macho6969@wp.pl",
-                        phone: "112 112 112"
-                    },
-                    fromWho: {
-                        name: "cichoń1000",
-                        email: "jacek.cichon@pwr.edu.pl",
-                        phone: "71 320 2109"
-                    }
-                 },]
-               }
+    let response = {
+        success: true,
+        errors: null,
+        data: {
+            matches: [{
+                id: 2,
+                myItem: {
+                    name: "Ciasto",
+                    description: "smaczne",
+                    photoUrl: "https://www.mojewypieki.com/img/images/original/Ciasto_kinder_pingui_5_2411.jpg",
+                    priceCategory: "Ło ho ho miljony",
+                    category: "Jedzonko"
+                },
+                exchangeItem: {
+                    name: "Buty",
+                    description: "ładne",
+                    photoUrl: "https://st.depositphotos.com/1016026/4819/i/950/depositphotos_48194997-stock-photo-high-heel-shoes-and-bikini.jpg",
+                    priceCategory: "No drogie",
+                    category: "Ubranko"
+                },
+                toWho: {
+                    name: "macho6969",
+                    email: "macho6969@wp.pl",
+                    phone: "112 112 112"
+                },
+                fromWho: {
+                    name: "cichoń1000",
+                    email: "jacek.cichon@pwr.edu.pl",
+                    phone: "71 320 2109"
+                }
+            }, ]
+        }
 
-        };
-        res.send(response);
+    };
+    res.send(response);
 });
 
-app.listen(port,()=>{
+app.listen(port, () => {
     console.log("Server is up on port " + port);
-    setInterval(algorithm.startAlgorithm, 21600000);
+    setInterval(algorithm.startAlgorithm, 7200000);
 });
