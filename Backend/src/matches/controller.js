@@ -646,3 +646,172 @@ exports.get_accepted = (req, res) => {
         }
     })
 };
+
+exports.get_all_matches = (req, res) => {
+    db.conn.query("SELECT * FROM chains WHERE userId = ?", req.jwt.userId, (err, result) => {
+        if (err) {
+            err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
+            return res.status(500).send({
+                success: false,
+                errors: [err],
+                data: null
+            });
+        }
+
+        var matches = []
+
+        if (result.length == 0) {
+            return res.status(200).send({
+                success: true,
+                errors: null,
+                data: { matches: matches }
+            })
+        } else {
+            result.forEach(handleNode)
+        }
+
+        function handleNode(row, index, array) {
+            var nodeId = row.id
+            var myItemId = row.myItemId
+            var prevNode = row.prevNodeId
+            var nextNode = row.nextNodeId
+            var status = row.chainStatus
+            var myItem
+            var toWho
+            var fromWho
+            var exchangeItem
+
+            db.conn.query("SELECT * FROM items WHERE id = ?", myItemId, getItemData)
+            function getItemData(err, result) {
+                if (err) {
+                    err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
+                    return res.status(500).send({
+                        success: false,
+                        errors: [err],
+                        data: null
+                    });
+                }
+
+                if (result.length > 0) {
+                    myItem = {
+                        id: myItemId,
+                        name: result[0].itemName,
+                        description: result[0].itemDescription,
+                        photoUrl: result[0].itemPhoto,
+                        priceCategory: result[0].itemPriceCategory,
+                        category: result[0].itemCategory
+                    }
+
+                    db.conn.query("SELECT * FROM users WHERE id IN (SELECT userId FROM chains WHERE id = ?)", nextNode, getNextPerson)
+                } else {
+                    return res.status(500).send({
+                        success: false,
+                        errors: [{ message: 'Item of id ' + myItemId + ' for ' + nodeId + ' node not found' }],
+                        data: null
+                    });
+                }
+            }
+
+            function getNextPerson(err, result) {
+                if (err) {
+                    err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
+                    return res.status(500).send({
+                        success: false,
+                        errors: [err],
+                        data: null
+                    });
+                }
+
+                if (result.length > 0) {
+                    toWho = {
+                        id: result[0].id,
+                        name: result[0].userName,
+                        email: result[0].userEmail,
+                        phone: result[0].userPhone
+                    }
+
+                    db.conn.query("SELECT * FROM users WHERE id IN (SELECT userId FROM chains WHERE id = ?)", prevNode, getPrevPerson)
+                } else {
+                    return res.status(500).send({
+                        success: false,
+                        errors: [{ message: 'Next user not found, nodeId = ' + nodeId }],
+                        data: null
+                    });
+                }
+            }
+
+            function getPrevPerson(err, result) {
+                if (err) {
+                    err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
+                    return res.status(500).send({
+                        success: false,
+                        errors: [err],
+                        data: null
+                    });
+                }
+
+                if (result.length > 0) {
+                    fromWho = {
+                        id: result[0].id,
+                        name: result[0].userName,
+                        email: result[0].userEmail,
+                        phone: result[0].userPhone
+                    }
+
+                    db.conn.query("SELECT * FROM items WHERE id IN (SELECT myItemId FROM chains WHERE id = ?)", prevNode, getExchangeItem)
+                } else {
+                    return res.status(500).send({
+                        success: false,
+                        errors: [{ message: 'Next user not found, nodeId = ' + nodeId }],
+                        data: null
+                    });
+                }
+            }
+
+            function getExchangeItem(err, result) {
+                if (err) {
+                    err = JSON.parse(JSON.stringify(err).replace("\"sqlMessage\":", "\"message\":"));
+                    return res.status(500).send({
+                        success: false,
+                        errors: [err],
+                        data: null
+                    });
+                }
+
+                if (result.length > 0) {
+                    exchangeItem = {
+                        id: result[0].id,
+                        name: result[0].itemName,
+                        description: result[0].itemDescription,
+                        photoUrl: result[0].itemPhoto,
+                        priceCategory: result[0].itemPriceCategory,
+                        category: result[0].itemCategory
+                    }
+
+                    matches.push({
+                        id: nodeId,
+                        status: status,
+                        myItem: myItem,
+                        exchangeItem: exchangeItem,
+                        toWho: toWho,
+                        fromWho: fromWho
+                    })
+
+                    if (index == array.length - 1) {
+                        return res.status(200).send({
+                            success: true,
+                            errors: null,
+                            data: { matches: matches }
+                        })
+                    }
+                } else {
+                    return res.status(500).send({
+                        success: false,
+                        errors: [{ message: 'Next user not found, nodeId = ' + nodeId }],
+                        data: null
+                    });
+                }
+            }
+        }
+    })
+};
